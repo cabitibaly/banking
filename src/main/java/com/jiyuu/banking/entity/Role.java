@@ -10,10 +10,10 @@ import lombok.*;
 @Setter
 @Entity
 @Table(name = "roles")
-public class Role {
+public class Role extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_role;
+    private Long idRole;
     @Enumerated(EnumType.STRING)
     @Column(length = 15)
     private TypeOfRole label;
