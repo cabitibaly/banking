@@ -26,7 +26,7 @@ public class ApplicationControllerAdvice {
     @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(value = EntityExistsException.class)
     public @ResponseBody ProblemDetail entityExistsException(final EntityExistsException exception) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "L'utilisateur existe déjà");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
         problemDetail.setProperty("erreur", "L'utilisateur existe déjà");
         return problemDetail;
     }
@@ -82,7 +82,7 @@ public class ApplicationControllerAdvice {
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     @ExceptionHandler(value = InsufficientFundsException.class)
     public @ResponseBody ProblemDetail insufficientFundsException(final InsufficientFundsException exception) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, "Vous n'avez pas assez d'argent");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
         problemDetail.setProperty("erreur", "Vous n'avez pas assez d'argent");
         return problemDetail;
     }
@@ -90,7 +90,7 @@ public class ApplicationControllerAdvice {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(value = ResourceNotFoundException.class)
     public @ResponseBody ProblemDetail resourceNotFoundException(final ResourceNotFoundException exception) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "La ressource demandée n'est pas disponible");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
         problemDetail.setProperty("erreur", "Désolé mais la demande n'a pas abouti");
         return problemDetail;
     }

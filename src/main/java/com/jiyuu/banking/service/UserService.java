@@ -62,7 +62,7 @@ public class UserService implements UserDetailsService {
         EmailVerification emailVerification = this.emailVerificationService.readByCode(code);
 
         if(emailVerification.isExpired()) {
-            throw new ValidationException("Le code fourni n'est pas valide");
+            throw new ValidationException("Le code fourni a expiré");
         }
 
         User user = this.userRepository

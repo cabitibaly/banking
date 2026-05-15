@@ -2,6 +2,7 @@ package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.entity.EmailVerification;
 import com.jiyuu.banking.entity.User;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.EmailVerificationRepository;
 import com.jiyuu.banking.repository.UserRepository;
@@ -49,6 +50,6 @@ public class EmailVerificationService {
     public EmailVerification readByCode(String code) {
         return this.emailVerificationRepository
                 .findByCode(code)
-                .orElseThrow(() -> new ValidationException("Le code fourni n'est pas valide"));
+                .orElseThrow(() -> new ResourceNotFoundException("Le code fourni n'existe pas"));
     }
 }
