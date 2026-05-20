@@ -4,6 +4,7 @@ import com.jiyuu.banking.config.JwtUtils;
 import com.jiyuu.banking.dto.ApiResponse;
 import com.jiyuu.banking.dto.AuthRequest;
 import com.jiyuu.banking.dto.AuthResponse;
+import com.jiyuu.banking.dto.ResetPassword;
 import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.service.RefreshTokenService;
@@ -117,6 +118,30 @@ public class UserController {
         );
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<?>> forgotPassword(@RequestParam String email) {
+        this.userService.forgotPassword(email);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Un email a été envoyé à l'adresse mail fournie",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @PatchMapping("/reset-password")
+    public ResponseEntity<ApiResponse<?>> resetPassword(@RequestParam String token, @Valid @RequestBody ResetPassword resetPassword) {
+        this.userService.resetPassword(token, resetPassword.oldPassword(), resetPassword.newPassword());
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Votre mot de passe a été modifié avec succès",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+        return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
     @GetMapping("/test")

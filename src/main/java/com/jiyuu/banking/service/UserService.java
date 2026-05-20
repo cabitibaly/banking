@@ -22,6 +22,8 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
+    private final TokenStoreService tokenStoreService;
+    private final NotificationSender notificationSender;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -70,6 +72,23 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         user.setEnabled(true);
+        this.userRepository.save(user);
+    }
+
+    public void forgotPassword(String email) {
+        String token = this.tokenStoreService.generatePasswordResetToken(email);
+        this.notificationSender.sendForgotPasswordMail(email, token);
+    }
+
+    public void resetPassword(String token, String Oldpassword, String NewPassword) {
+        String email = this.tokenStoreService.validatePasswordResetToken(token);
+        User user = (User) this.loadUserByUsername(email);
+
+        if(!this.passwordEncoder.matches(Oldpassword, user.getPassword())) {
+            throw new ValidationException("Ancien mot de passe incorrect");
+        }
+
+        user.setPassword(this.passwordEncoder.encode(NewPassword));
         this.userRepository.save(user);
     }
 }
