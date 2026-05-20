@@ -2,9 +2,11 @@ package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.config.JwtUtils;
 import com.jiyuu.banking.entity.RefreshToken;
+import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.exception.ExpiredRefreshTokenException;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.repository.RefreshTokenRepository;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,5 +33,14 @@ public class RefreshTokenService {
         this.refreshTokenRepository.save(refreshToken);
 
         return jwtUtils.generateToken(refreshToken.getUser());
+    }
+
+    public Map<String, String> createTokenPair(User user) {
+        return jwtUtils.generateToken(user);
+    }
+
+    @Transactional
+    public void expireAllUserRefreshToken(Long userId) {
+        this.refreshTokenRepository.expiredAllByUserId(userId);
     }
 }

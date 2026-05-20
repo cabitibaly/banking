@@ -1,5 +1,6 @@
 package com.jiyuu.banking.service;
 
+import com.jiyuu.banking.config.JwtUtils;
 import com.jiyuu.banking.entity.EmailVerification;
 import com.jiyuu.banking.entity.Role;
 import com.jiyuu.banking.entity.User;
@@ -14,6 +15,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.Optional;
 
 @AllArgsConstructor
@@ -24,6 +26,8 @@ public class UserService implements UserDetailsService {
     private final EmailVerificationService emailVerificationService;
     private final TokenStoreService tokenStoreService;
     private final NotificationSender notificationSender;
+    private final RefreshTokenService refreshTokenService;
+    private final JwtUtils jwtUtils;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -49,6 +53,7 @@ public class UserService implements UserDetailsService {
         user.setEmail(email);
         user.setPassword(hashedPassword);
         user.setRole(role);
+        user.setTokenVersion(1);
 
         user = this.userRepository.save(user);
         this.emailVerificationService.createNewCode(user);
@@ -90,5 +95,18 @@ public class UserService implements UserDetailsService {
 
         user.setPassword(this.passwordEncoder.encode(NewPassword));
         this.userRepository.save(user);
+        this.tokenStoreService.deletePasswordResetToken(token);
+    }
+
+    public Map<String, String> updateEmail(String email) {
+        User user = this.userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur inconnu"));
+
+        user.setEmail(email);
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        this.userRepository.save(user);
+
+        this.refreshTokenService.expireAllUserRefreshToken(user.getIdUser());
+        return this.refreshTokenService.createTokenPair(user);
     }
 }

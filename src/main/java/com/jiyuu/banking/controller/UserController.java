@@ -40,6 +40,7 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@Valid @RequestBody AuthRequest authRequest) {
+        log.info("Registering user with email {}", authRequest.email());
         User userCreated = this.userService.register(authRequest.email(), authRequest.password());
         return new ResponseEntity<>(userCreated, HttpStatus.CREATED);
     }
@@ -142,6 +143,23 @@ public class UserController {
                 Instant.now()
         );
         return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @PatchMapping("/update-email")
+    public ResponseEntity<ApiResponse<AuthResponse>> updateEmail(@RequestBody Map<String, String> updateEmail) {
+        Map<String, String> tokens = this.userService.updateEmail(updateEmail.get("email"));
+        AuthResponse authResponse = new AuthResponse(
+                tokens.get("accessToken"),
+                tokens.get("refreshToken")
+        );
+        ApiResponse<AuthResponse> response = new ApiResponse<>(
+                authResponse,
+                "Connexion réussie",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/test")

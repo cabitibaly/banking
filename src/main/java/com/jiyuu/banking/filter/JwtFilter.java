@@ -1,6 +1,9 @@
 package com.jiyuu.banking.filter;
 
 import com.jiyuu.banking.config.JwtUtils;
+import com.jiyuu.banking.entity.User;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
+import com.jiyuu.banking.repository.UserRepository;
 import com.jiyuu.banking.service.TokenStoreService;
 import com.jiyuu.banking.service.UserService;
 import jakarta.servlet.FilterChain;
@@ -29,6 +32,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private final UserService userService;
     private final TokenStoreService tokenStoreService;
     private final HandlerExceptionResolver handlerExceptionResolver;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -47,6 +51,19 @@ public class JwtFilter extends OncePerRequestFilter {
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 response.getWriter().write("{\"error\": \"Jeton invalide ou révoqué\"}");
                 return;
+            }
+
+            if (jwt != null) {
+                User user = this.userRepository.findByEmail(username)
+                        .orElseThrow(() -> new ResourceNotFoundException("Utilisateur inconnu"));
+                int tokenVersion = jwtUtils.getTokenVersion(jwt);
+
+                if (tokenVersion != user.getTokenVersion()) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\": \"Jeton invalide ou révoqué\"}");
+                    return;
+                }
             }
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

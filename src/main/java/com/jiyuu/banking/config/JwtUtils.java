@@ -46,7 +46,8 @@ public class JwtUtils {
         Map<String, String> claims = Map.of(
                 "username", user.getEmail(),
                 "role", user.getRole().getLabel().name(),
-                "jti", jit
+                "jti", jit,
+                "tokenVersion", String.valueOf(user.getTokenVersion())
         );
 
         String accessToken = createToken(claims, userDetails.getUsername());
@@ -110,6 +111,11 @@ public class JwtUtils {
         Date expiration = extractClaim(token, Claims::getExpiration);
         long remainingTime = expiration.getTime() - System.currentTimeMillis();
         return Math.max(remainingTime, 0);
+    }
+
+    public int getTokenVersion(String token) {
+        String tokenVerion = extractClaim(token, claims -> claims.get("tokenVersion", String.class));
+        return Integer.parseInt(tokenVerion);
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
