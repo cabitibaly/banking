@@ -46,7 +46,7 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.POST, "/auth/refresh-token").permitAll()
                                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
                                         .requestMatchers(HttpMethod.PATCH, "/auth/reset-password").permitAll()
-                                        .requestMatchers(HttpMethod.POST, "/auth/logout").hasAuthority("CUSTOMER_UPDATE")
+                                        .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                                         .requestMatchers(HttpMethod.PATCH, "/auth/update-email").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE", "CUSTOMER_UPDATE")
                                         .requestMatchers(HttpMethod.GET, "/auth/test").hasAuthority("CUSTOMER_READ")
                                         .anyRequest().authenticated()
