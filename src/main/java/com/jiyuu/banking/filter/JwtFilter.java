@@ -1,0 +1,83 @@
+package com.jiyuu.banking.filter;
+
+import com.jiyuu.banking.config.JwtUtils;
+import com.jiyuu.banking.entity.User;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
+import com.jiyuu.banking.repository.UserRepository;
+import com.jiyuu.banking.service.TokenStoreService;
+import com.jiyuu.banking.service.UserService;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+
+import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+
+@Slf4j
+@Component
+@AllArgsConstructor
+public class JwtFilter extends OncePerRequestFilter {
+    private final JwtUtils jwtUtils;
+    private final UserService userService;
+    private final TokenStoreService tokenStoreService;
+    private final HandlerExceptionResolver handlerExceptionResolver;
+    private final UserRepository userRepository;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String jwt = null;
+        String username = null;
+
+        try {
+            final String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwt = authHeader.substring(7);
+                username = jwtUtils.extractUsername(jwt);
+            }
+
+            if (jwt != null && tokenStoreService.isBlacklisted(jwt)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("{\"error\": \"Jeton invalide ou révoqué\"}");
+                return;
+            }
+
+            if (jwt != null) {
+                User user = this.userRepository.findByEmail(username)
+                        .orElseThrow(() -> new ResourceNotFoundException("Utilisateur inconnu"));
+                int tokenVersion = jwtUtils.getTokenVersion(jwt);
+
+                if (tokenVersion != user.getTokenVersion()) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\": \"Jeton invalide ou révoqué\"}");
+                    return;
+                }
+            }
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userService.loadUserByUsername(username);
+                if (jwtUtils.validateToken(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            }
+
+            filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            this.handlerExceptionResolver.resolveException(request, response, null, e);
+        }
+    }
+}

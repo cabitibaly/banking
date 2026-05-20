@@ -17,14 +17,24 @@ import java.util.Collection;
 @Setter
 @Entity
 @Table(name = "users")
-public class Users implements UserDetails {
+public class User extends BaseEntity implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_user;
+    private Long idUser;
+
+    @Column(unique = true)
     private String email;
+
+    @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false)
     private Boolean enabled;
+
+    @Column(nullable = false)
+    private int tokenVersion;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "id_role")
     private Role role;
