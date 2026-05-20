@@ -49,6 +49,7 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                                         .requestMatchers(HttpMethod.PATCH, "/auth/update-email").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE", "CUSTOMER_UPDATE")
                                         .requestMatchers(HttpMethod.GET, "/auth/test").hasAuthority("CUSTOMER_READ")
+                                        .requestMatchers(HttpMethod.POST, "/customers").hasAuthority("CUSTOMER_CREATE")
                                         .anyRequest().authenticated()
                 )
                 .sessionManagement(httpSecuritySessionManagementConfigurer ->
