@@ -102,6 +102,10 @@ public class UserService implements UserDetailsService {
         User user = this.userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Utilisateur inconnu"));
 
+        if (user.getEmail().equals(email)) {
+            throw new ValidationException("L'email fourni est le même que l'ancien");
+        }
+
         user.setEmail(email);
         user.setTokenVersion(user.getTokenVersion() + 1);
         this.userRepository.save(user);
