@@ -1,13 +1,15 @@
 package com.jiyuu.banking.filter;
 
 import com.jiyuu.banking.config.JwtUtils;
+import com.jiyuu.banking.service.TokenStoreService;
 import com.jiyuu.banking.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,12 +19,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
+@Slf4j
 @Component
 @AllArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
     private final UserService userService;
+    private final TokenStoreService tokenStoreService;
     private final HandlerExceptionResolver handlerExceptionResolver;
 
     @Override
@@ -35,6 +40,13 @@ public class JwtFilter extends OncePerRequestFilter {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 jwt = authHeader.substring(7);
                 username = jwtUtils.extractUsername(jwt);
+            }
+
+            if (jwt != null && tokenStoreService.isBlacklisted(jwt)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("{\"error\": \"Jeton invalide ou révoqué\"}");
+                return;
             }
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

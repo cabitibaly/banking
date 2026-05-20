@@ -36,15 +36,29 @@ public class RedisConfig {
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration(this.host, this.port);
 
-        if(this.password.isEmpty()) {
+        if(this.password != null && !this.password.isEmpty()) {
             configuration.setPassword(RedisPassword.of(this.password));
         }
 
         return new LettuceConnectionFactory(configuration);
     }
 
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    @Bean("tokenRedisTemplate")
+    public RedisTemplate<String, String> tokenRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+
+        template.setKeySerializer(RedisSerializer.string());
+        template.setValueSerializer(RedisSerializer.string());
+        template.setHashKeySerializer(RedisSerializer.string());
+        template.setHashValueSerializer(RedisSerializer.string());
+
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    @Bean("jsonRedisTemplate")
+    public RedisTemplate<String, Object> jsonRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
 
