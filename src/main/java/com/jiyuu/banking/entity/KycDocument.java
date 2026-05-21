@@ -30,7 +30,7 @@ public class KycDocument extends BaseEntity{
     @Enumerated(EnumType.STRING)
     private KycStatus kycStatus;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "id_customer")
     private Customer customer;
 }

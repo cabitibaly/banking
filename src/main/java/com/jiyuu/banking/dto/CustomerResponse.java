@@ -1,5 +1,7 @@
 package com.jiyuu.banking.dto;
 
+import com.jiyuu.banking.entity.Customer;
+
 import java.time.LocalDateTime;
 
 public record CustomerResponse(
@@ -14,4 +16,18 @@ public record CustomerResponse(
         LocalDateTime dateCreation,
         LocalDateTime dateModification
 ) {
+    public static CustomerResponse of(Customer customer) {
+        return new CustomerResponse(
+                customer.getIdCustomer(),
+                customer.getNumeroCustomer(),
+                customer.getNomCustomer(),
+                customer.getPrenomCustomer(),
+                customer.getUser().getEmail(),
+                customer.getTelephoneCustomer(),
+                customer.getDateNaissance(),
+                customer.getStatusCustomer().toString(),
+                customer.getCreatedAt(),
+                customer.getUpdatedAt()
+        );
+    }
 }

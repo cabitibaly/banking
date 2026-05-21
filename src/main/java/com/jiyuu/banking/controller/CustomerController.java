@@ -1,9 +1,7 @@
 package com.jiyuu.banking.controller;
 
 import com.jiyuu.banking.config.JwtUtils;
-import com.jiyuu.banking.dto.ApiResponse;
-import com.jiyuu.banking.dto.CustomerRequest;
-import com.jiyuu.banking.dto.CustomerResponse;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.service.CustomerService;
@@ -43,5 +41,123 @@ public class CustomerController {
         );
 
         return new ResponseEntity<>(response,HttpStatus.CREATED);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<PagedResponse<CustomerResponse>>> getCustomers(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sortBy", defaultValue = "idCustomer") String soortBy,
+            @RequestParam(name = "orderBy", defaultValue = "asc") String orderBy
+    ) {
+        PagedResponse<CustomerResponse> customers = this.customerService.getCustomers(page, size, soortBy, orderBy);
+        ApiResponse<PagedResponse<CustomerResponse>> response = new ApiResponse<>(
+                customers,
+                "Récupération de tous les clients réussie",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{idCustomer}")
+    public ResponseEntity<ApiResponse<CustomerWithKycDocumentResponse>> getCustomer(@PathVariable("idCustomer") long id) {
+        CustomerWithKycDocumentResponse customerResponse = this.customerService.getCustomer(id);
+        ApiResponse<CustomerWithKycDocumentResponse> response = new ApiResponse<>(
+                customerResponse,
+                "Récupération d'un client réussie",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/{idCustomer}/kyc")
+    public ResponseEntity<ApiResponse<?>> addKycDocument(@PathVariable("idCustomer") long id, @Valid @RequestBody KycDocumentRequest kycDocumentRequest) {
+        this.customerService.addKycDocument(id, kycDocumentRequest);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Ajout du document réussi",
+                HttpStatus.CREATED.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{idCustomer}/{status}")
+    public ResponseEntity<ApiResponse<?>> updateCustomerStatus(@PathVariable("idCustomer") long id, @PathVariable("status") String status) {
+        this.customerService.changeCustomerStatus(id, status);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Mise à jour du statut du client réussi",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{idCustomer}")
+    public ResponseEntity<ApiResponse<?>> updateCustomer(
+            @PathVariable("idCustomer") long id,
+            @Valid @RequestBody CustomerRequest customerRequest
+    ) {
+        this.customerService.updateCustomer(id, customerRequest);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Mise à jour du client réussi",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{idCustomer}")
+    public ResponseEntity<ApiResponse<?>> deleteCustomer(@PathVariable("idCustomer") long id) {
+        this.customerService.deleteCustomer(id);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Suppression du client réussi",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{idCustomer}/kyc/{idKycDocument}")
+    public ResponseEntity<ApiResponse<?>> updateKycDocument(
+            @PathVariable("idCustomer") long idCustomer,
+            @PathVariable("idKycDocument") long idKycDocument,
+            @RequestParam(name = "status", required = true) String status
+    ) {
+        this.customerService.updateKycDocument(idKycDocument, idCustomer, status);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Mise à jour du document réussi",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{idCustomer}/kyc/{idKycDocument}")
+    public ResponseEntity<ApiResponse<?>> deleteKycDocument(
+            @PathVariable("idCustomer") long idCustomer,
+            @PathVariable("idKycDocument") long idKycDocument
+    ) {
+        this.customerService.deleteKycDocument(idKycDocument, idCustomer);
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Suppression du document réussi",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -1,13 +1,21 @@
 package com.jiyuu.banking.service;
 
-import com.jiyuu.banking.dto.CustomerRequest;
-import com.jiyuu.banking.dto.CustomerResponse;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Customer;
+import com.jiyuu.banking.entity.KycDocument;
 import com.jiyuu.banking.entity.User;
+import com.jiyuu.banking.enums.KycStatus;
+import com.jiyuu.banking.enums.KycType;
 import com.jiyuu.banking.enums.StatusCustomer;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.CustomerRepository;
+import com.jiyuu.banking.repository.KycDocumentRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -17,6 +25,7 @@ import java.time.Period;
 @AllArgsConstructor
 public class CustomerService {
     private final CustomerRepository customerRepository;
+    private final KycDocumentRepository kycDocumentRepository;
 
     public CustomerResponse createCustomer(User user, CustomerRequest customerRequest) {
 
@@ -37,18 +46,7 @@ public class CustomerService {
 
         this.customerRepository.save(customer);
 
-        return new CustomerResponse(
-                customer.getIdCustomer(),
-                customer.getNumeroCustomer(),
-                customer.getNomCustomer(),
-                customer.getPrenomCustomer(),
-                user.getEmail(),
-                customer.getTelephoneCustomer(),
-                customer.getDateNaissance(),
-                customer.getStatusCustomer().toString(),
-                customer.getCreatedAt(),
-                customer.getUpdatedAt()
-        );
+        return CustomerResponse.of(customer);
     }
 
     private String generateNumeroCustomer(long id) {
@@ -58,5 +56,109 @@ public class CustomerService {
 
     private int calculateAge(LocalDate dateNaissance) {
         return Period.between(dateNaissance, LocalDate.now()).getYears();
+    }
+
+    public PagedResponse<CustomerResponse> getCustomers(int page, int size, String soortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(soortBy).descending()
+                : Sort.by(soortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<CustomerResponse> customers = this.customerRepository
+                .findAll(pageable)
+                .map(CustomerResponse::of);
+        return PagedResponse.of(customers);
+    }
+
+    public CustomerWithKycDocumentResponse getCustomer(long id) {
+        Customer customer = this.customerRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Ce clientn'existe pas")
+        );
+
+        return CustomerWithKycDocumentResponse.of(customer);
+    }
+
+    public void changeCustomerStatus(long idCustomer, String status) {
+        Customer customer = this.customerRepository.findById(idCustomer)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
+
+        if (status.equalsIgnoreCase("VERIFIED")) {
+            if (customer.getKycDocuments().isEmpty()) {
+                throw new ValidationException("Vous devez ajouter un document KYC pour changer le statut du client");
+            }
+
+            customer.getKycDocuments().forEach(kycDocument -> {
+                if (kycDocument.getKycStatus() != KycStatus.VERIFIED ) {
+                    throw new ValidationException("Tous les documents KYC doivent être validés pour changer le statut du client");
+                }
+            });
+        }
+
+        customer.setStatusCustomer(StatusCustomer.valueOf(status));
+        this.customerRepository.save(customer);
+    }
+
+    public void updateCustomer(long idCustomer, CustomerRequest customerRequest) {
+        Customer customer = this.customerRepository.findById(idCustomer)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
+
+        customer.setNomCustomer(customerRequest.nom());
+        customer.setPrenomCustomer(customerRequest.prenom());
+        customer.setTelephoneCustomer(customerRequest.telephone());
+        customer.setDateNaissance(customerRequest.dateNaissance());
+
+        this.customerRepository.save(customer);
+    }
+
+    public void deleteCustomer(long idCustomer) {
+        Customer customer = this.customerRepository.findById(idCustomer).orElseThrow(
+                () -> new ResourceNotFoundException("Ce client n'existe pas")
+        );
+
+        this.customerRepository.delete(customer);
+    }
+
+    public void addKycDocument(long idCustomer, KycDocumentRequest kycDocumentRequest) {
+        Customer customer = this.customerRepository.findById(idCustomer)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
+
+        customer.getKycDocuments().forEach(kycDocument -> {
+            if (kycDocument.getKycType().toString().equals(kycDocumentRequest.kycType())) {
+                throw new ValidationException(
+                        String.format("Le document KYC de type %s a déjà été ajouté", kycDocumentRequest.kycType())
+                );
+            }
+        });
+
+        KycDocument kycDocument = new KycDocument();
+        kycDocument.setCustomer(customer);
+        kycDocument.setFileUrl(kycDocumentRequest.fileUrl());
+        kycDocument.setKycStatus(KycStatus.PENDING);
+        kycDocument.setKycType(KycType.valueOf(kycDocumentRequest.kycType()));
+
+        this.kycDocumentRepository.save(kycDocument);
+    }
+
+    public void updateKycDocument(long idKycDocument, long idCustomer, String status) {
+        KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
+
+        if (kycDocument.getKycStatus() != KycStatus.PENDING && kycDocument.getKycStatus() != KycStatus.IN_REVIEW) {
+            throw new ValidationException("Le document KYC a déjà été traité");
+        }
+
+        kycDocument.setKycStatus(KycStatus.valueOf(status));
+        this.kycDocumentRepository.save(kycDocument);
+    }
+
+    public void deleteKycDocument(long idKycDocument, long idCustomer) {
+        KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
+
+        if (kycDocument.getKycStatus() == KycStatus.IN_REVIEW) {
+            throw new ValidationException("Le document KYC est en cours de traitement");
+        }
+
+        this.kycDocumentRepository.delete(kycDocument);
     }
 }

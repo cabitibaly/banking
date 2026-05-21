@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.MalformedKeyException;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.persistence.EntityExistsException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -30,6 +31,12 @@ public class ApplicationControllerAdvice {
     @ExceptionHandler(value = EntityExistsException.class)
     public @ResponseBody ProblemDetail entityExistsException(final EntityExistsException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(value = DataIntegrityViolationException.class)
+    public @ResponseBody ProblemDetail dataIntegrityViolationException(final DataIntegrityViolationException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Une erreur de validation s'est produite");
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)

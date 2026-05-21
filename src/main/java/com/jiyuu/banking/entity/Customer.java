@@ -41,10 +41,10 @@ public class Customer extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private StatusCustomer statusCustomer;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "id_user")
     private User user;
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "customer")
+    @OneToMany(cascade = CascadeType.REMOVE, mappedBy = "customer")
     private List<KycDocument> kycDocuments = new ArrayList<>();
 }
