@@ -39,6 +39,9 @@ public class User extends BaseEntity implements UserDetails {
     @JoinColumn(name = "id_role")
     private Role role;
 
+    @OneToOne(mappedBy = "user")
+    private Customer customer;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return this.role.getLabel().getAuthorities();

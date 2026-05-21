@@ -26,7 +26,7 @@ public class EmailVerification extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
-    @ManyToOne(cascade = {CascadeType.MERGE, CascadeType.DETACH})
+    @ManyToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "id_user")
     private User user;
 

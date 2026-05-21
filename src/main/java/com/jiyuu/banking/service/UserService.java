@@ -36,15 +36,14 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    public User register(String email, String password) {
+    public User register(String email, String password, String roleRequest) {
         Optional<User> userOptional = this.userRepository.findByEmail(email);
 
         if(userOptional.isPresent()) {
             throw new EntityExistsException("Email déjà utilisé");
         }
 
-        Role role = new Role();
-        role.setLabel(TypeOfRole.CUSTOMER);
+        Role role = this.getRole(roleRequest);
 
         String hashedPassword = this.passwordEncoder.encode(password);
 
@@ -59,6 +58,13 @@ public class UserService implements UserDetailsService {
         this.emailVerificationService.createNewCode(user);
 
         return user;
+    }
+
+    private Role getRole(String role) {
+        TypeOfRole typeOfRole = TypeOfRole.valueOf(role);
+        Role roleEnum = new Role();
+        roleEnum.setLabel(typeOfRole);
+        return roleEnum;
     }
 
     public void resendCode(String email) {

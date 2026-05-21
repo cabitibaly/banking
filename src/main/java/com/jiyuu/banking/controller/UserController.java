@@ -1,10 +1,7 @@
 package com.jiyuu.banking.controller;
 
 import com.jiyuu.banking.config.JwtUtils;
-import com.jiyuu.banking.dto.ApiResponse;
-import com.jiyuu.banking.dto.AuthRequest;
-import com.jiyuu.banking.dto.AuthResponse;
-import com.jiyuu.banking.dto.ResetPassword;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.service.RefreshTokenService;
@@ -39,9 +36,12 @@ public class UserController {
     private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@Valid @RequestBody AuthRequest authRequest) {
-        log.info("Registering user with email {}", authRequest.email());
-        User userCreated = this.userService.register(authRequest.email(), authRequest.password());
+    public ResponseEntity<User> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        User userCreated = this.userService.register(
+                registerRequest.email(),
+                registerRequest.password(),
+                registerRequest.role()
+        );
         return new ResponseEntity<>(userCreated, HttpStatus.CREATED);
     }
 

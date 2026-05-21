@@ -26,7 +26,7 @@ public class RefreshToken extends BaseEntity{
     @Column(nullable = false)
     private boolean expired;
 
-    @ManyToOne(cascade = {CascadeType.MERGE, CascadeType.DETACH})
+    @ManyToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "id_user")
     private User user;
 }
