@@ -1,5 +1,6 @@
 package com.jiyuu.banking.service;
 
+import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Customer;
 import com.jiyuu.banking.entity.KycDocument;
@@ -30,6 +31,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final KycDocumentRepository kycDocumentRepository;
 
+    @Auditable(action = "CREATE", entity = "CUSTOMER")
     public CustomerResponse createCustomer(User user, CustomerRequest customerRequest) {
 
         int age = this.calculateAge(LocalDate.from(customerRequest.dateNaissance()));
@@ -66,6 +68,7 @@ public class CustomerService {
         return Period.between(dateNaissance, LocalDate.now()).getYears();
     }
 
+    @Auditable(action = "READ", entity = "CUSTOMER")
     public PagedResponse<CustomerResponse> getCustomers(CustomerSearchCriteria customerSearchCriteria, int page, int size, String soortBy, String direction) {
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(soortBy).descending()
@@ -81,6 +84,7 @@ public class CustomerService {
         return PagedResponse.of(customers);
     }
 
+    @Auditable(action = "READ", entity = "CUSTOMER")
     public CustomerWithKycDocumentResponse getCustomer(long id) {
         Customer customer = this.customerRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce clientn'existe pas")
@@ -89,6 +93,7 @@ public class CustomerService {
         return CustomerWithKycDocumentResponse.of(customer);
     }
 
+    @Auditable(action = "UPDATE", entity = "CUSTOMER")
     public void changeCustomerStatus(long idCustomer, String status) {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
@@ -109,6 +114,7 @@ public class CustomerService {
         this.customerRepository.save(customer);
     }
 
+    @Auditable(action = "UPDATE", entity = "CUSTOMER")
     public void updateCustomer(long idCustomer, CustomerRequest customerRequest) {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
@@ -120,6 +126,7 @@ public class CustomerService {
         this.customerRepository.save(customer);
     }
 
+    @Auditable(action = "DELETE", entity = "CUSTOMER")
     public void deleteCustomer(long idCustomer) {
         Customer customer = this.customerRepository.findById(idCustomer).orElseThrow(
                 () -> new ResourceNotFoundException("Ce client n'existe pas")
@@ -128,6 +135,7 @@ public class CustomerService {
         this.customerRepository.delete(customer);
     }
 
+    @Auditable(action = "CREATE", entity = "KycDocument")
     public void addKycDocument(long idCustomer, KycDocumentRequest kycDocumentRequest) {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
@@ -149,6 +157,7 @@ public class CustomerService {
         this.kycDocumentRepository.save(kycDocument);
     }
 
+    @Auditable(action = "UPDATE", entity = "KycDocument")
     public void updateKycDocument(long idKycDocument, long idCustomer, String status) {
         KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
@@ -161,6 +170,7 @@ public class CustomerService {
         this.kycDocumentRepository.save(kycDocument);
     }
 
+    @Auditable(action = "DELETE", entity = "KycDocument")
     public void deleteKycDocument(long idKycDocument, long idCustomer) {
         KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
