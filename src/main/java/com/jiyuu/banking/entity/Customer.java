@@ -25,13 +25,10 @@ public class Customer extends BaseEntity {
     @Column(nullable = false)
     private String nomCustomer;
 
-    @Column(nullable = false)
-    private String prenomCustomer;
-
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String telephoneCustomer;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String numeroCustomer;
 
     @Column(nullable = false)

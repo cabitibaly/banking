@@ -11,15 +11,18 @@ import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.CustomerRepository;
 import com.jiyuu.banking.repository.KycDocumentRepository;
+import com.jiyuu.banking.repository.specification.CustomerSpecification;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -34,12 +37,17 @@ public class CustomerService {
             throw new ValidationException("Vous devez avoir au moins 18 ans pour créer un compte");
         }
 
+        Optional<Customer> customerOptional = this.customerRepository.findBytelephoneCustomer(customerRequest.telephone());
+
+        if (customerOptional.isPresent()) {
+            throw new ValidationException("Ce numéro de téléphone est déjà utilisé");
+        }
+
         Customer customer = new Customer();
 
         customer.setUser(user);
         customer.setStatusCustomer(StatusCustomer.PENDING);
         customer.setNomCustomer(customerRequest.nom());
-        customer.setPrenomCustomer(customerRequest.prenom());
         customer.setTelephoneCustomer(customerRequest.telephone());
         customer.setDateNaissance(customerRequest.dateNaissance());
         customer.setNumeroCustomer(this.generateNumeroCustomer(user.getIdUser()));
@@ -58,15 +66,18 @@ public class CustomerService {
         return Period.between(dateNaissance, LocalDate.now()).getYears();
     }
 
-    public PagedResponse<CustomerResponse> getCustomers(int page, int size, String soortBy, String direction) {
+    public PagedResponse<CustomerResponse> getCustomers(CustomerSearchCriteria customerSearchCriteria, int page, int size, String soortBy, String direction) {
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(soortBy).descending()
                 : Sort.by(soortBy).ascending();
 
+        Specification<Customer> spec = CustomerSpecification.withFiler(customerSearchCriteria);
+
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<CustomerResponse> customers = this.customerRepository
-                .findAll(pageable)
+                .findAll(spec, pageable)
                 .map(CustomerResponse::of);
+
         return PagedResponse.of(customers);
     }
 
@@ -103,7 +114,6 @@ public class CustomerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
 
         customer.setNomCustomer(customerRequest.nom());
-        customer.setPrenomCustomer(customerRequest.prenom());
         customer.setTelephoneCustomer(customerRequest.telephone());
         customer.setDateNaissance(customerRequest.dateNaissance());
 

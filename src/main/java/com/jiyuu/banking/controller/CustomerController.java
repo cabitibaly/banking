@@ -45,12 +45,25 @@ public class CustomerController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<CustomerResponse>>> getCustomers(
+            @RequestParam(name = "nom", required = false) String nom,
+            @RequestParam(name = "telephone", required = false) String telephone,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "numero", required = false) String numero,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "sortBy", defaultValue = "idCustomer") String soortBy,
             @RequestParam(name = "orderBy", defaultValue = "asc") String orderBy
     ) {
-        PagedResponse<CustomerResponse> customers = this.customerService.getCustomers(page, size, soortBy, orderBy);
+        CustomerSearchCriteria customerSearchCriteria = new CustomerSearchCriteria(
+                nom,
+                telephone,
+                status,
+                numero
+        );
+
+        PagedResponse<CustomerResponse> customers = this.customerService
+                .getCustomers(customerSearchCriteria,page, size, soortBy, orderBy);
+
         ApiResponse<PagedResponse<CustomerResponse>> response = new ApiResponse<>(
                 customers,
                 "Récupération de tous les clients réussie",

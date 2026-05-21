@@ -9,9 +9,6 @@ public record CustomerRequest(
         @NotBlank(message = "Le nom est obligatoire")
         String nom,
 
-        @NotBlank(message = "Le prénom est obligatoire")
-        String prenom,
-
         @NotBlank(message = "Le téléphone est obligatoire")
         String telephone,
 
