@@ -1,16 +1,14 @@
 package com.jiyuu.banking.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "account_membership")
@@ -34,7 +32,7 @@ public class AccountMembership extends BaseEntity {
     private Customer customer;
 
     @PrePersist
-    public void onCreate() {
+    public void initDateAdhesion() {
         if (this.dateAdhesion == null) {
             this.dateAdhesion = LocalDateTime.now();
         }
