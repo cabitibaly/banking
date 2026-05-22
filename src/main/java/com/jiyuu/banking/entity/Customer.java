@@ -44,4 +44,7 @@ public class Customer extends BaseEntity {
 
     @OneToMany(cascade = CascadeType.REMOVE, mappedBy = "customer")
     private List<KycDocument> kycDocuments = new ArrayList<>();
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "customer")
+    private List<AccountMembership> accountMemberships = new ArrayList<>();
 }
