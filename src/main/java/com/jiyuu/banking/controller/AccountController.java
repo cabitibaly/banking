@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 
@@ -29,6 +30,20 @@ public class AccountController {
         );
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{idAccount}/decouvert")
+    public ResponseEntity<ApiResponse<?>> changeDecouvert(@PathVariable long idAccount, @RequestBody Map<String, BigDecimal> accountReq) {
+        this.accountService.changeDecouvert(idAccount, accountReq.get("decouvert"));
+
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Le compte a bien été modifié",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PatchMapping("/{idAccount}/status")

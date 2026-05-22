@@ -59,6 +59,7 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.PATCH, "/customers/{idCustomer}/kyc/{idKycDocument}").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .requestMatchers(HttpMethod.DELETE, "/customers/{idCustomer}/kyc/{idKycDocument}").hasAnyAuthority("ADMINISTRATOR_DELETE", "AGENT_DELETE", "CUSTOMER_DELETE")
                                         .requestMatchers(HttpMethod.POST, "/accounts").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE")
+                                        .requestMatchers(HttpMethod.PATCH, "/accounts/{idAccount}/decouvert").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .requestMatchers(HttpMethod.PATCH, "/accounts/{idAccount}/status").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .requestMatchers(HttpMethod.DELETE, "/accounts/membership/{idAccount}/{idCustomer}").hasAnyAuthority("ADMINISTRATOR_DELETE", "AGENT_DELETE")
                                         .requestMatchers(HttpMethod.GET, "/accounts").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ")
