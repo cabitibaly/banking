@@ -1,0 +1,7 @@
+package com.jiyuu.banking.enums;
+
+public enum AccountType {
+    CHECKING,
+    SAVINGS,
+    TERM_DEPOSIT,
+}

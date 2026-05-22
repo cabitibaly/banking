@@ -72,7 +72,7 @@ public class ApplicationControllerAdvice {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ExceptionHandler(value = AccessDeniedException.class)
     public @ResponseBody ProblemDetail accessDeniedException(final AccessDeniedException exception) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Vos droits ne vous permettent pas d'accéder à cette ressource");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
     }
 
     @ResponseStatus(HttpStatus.FORBIDDEN)
