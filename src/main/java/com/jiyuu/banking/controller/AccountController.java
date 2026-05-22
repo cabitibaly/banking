@@ -1,7 +1,6 @@
 package com.jiyuu.banking.controller;
 
-import com.jiyuu.banking.dto.AccountRequest;
-import com.jiyuu.banking.dto.ApiResponse;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -53,6 +52,44 @@ public class AccountController {
         ApiResponse<?> response = new ApiResponse<>(
                 null,
                 "Le compte a bien été modifié",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<PagedResponse<AccountResponse>>> getAccounts(
+            @RequestParam(name = "numero", required = false) String numero,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size,
+            @RequestParam(name = "sort", required = false, defaultValue = "idAccount") String sort,
+            @RequestParam(name = "direction", required = false, defaultValue = "asc") String direction
+    ) {
+        AccountSearchCriteria accountSearchCriteria = new AccountSearchCriteria(numero, status, type);
+
+        PagedResponse<AccountResponse> accounts = this.accountService.getAccounts(accountSearchCriteria, page, size, sort, direction);
+
+        ApiResponse<PagedResponse<AccountResponse>> response = new ApiResponse<>(
+                accounts,
+                "La liste de tous les comptes",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{idAccount}")
+    public ResponseEntity<ApiResponse<AccountResponse>> getAccount(@PathVariable long idAccount) {
+        AccountResponse account = this.accountService.getAccount(idAccount);
+
+        ApiResponse<AccountResponse> response = new ApiResponse<>(
+                account,
+                "Le compte a été trouvé",
                 HttpStatus.OK.value(),
                 Instant.now()
         );

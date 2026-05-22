@@ -40,7 +40,7 @@ public class Account extends BaseEntity {
     private BigDecimal decouvert;
 
     @Column(nullable = false)
-    private boolean isDecouvert;
+    private boolean estDecouvert;
 
     @Column(nullable = false)
     private Currency currencyAccount;

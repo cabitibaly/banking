@@ -1,6 +1,9 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.dto.AccountRequest;
+import com.jiyuu.banking.dto.AccountResponse;
+import com.jiyuu.banking.dto.AccountSearchCriteria;
+import com.jiyuu.banking.dto.PagedResponse;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.AccountMembership;
 import com.jiyuu.banking.entity.Customer;
@@ -12,8 +15,14 @@ import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.repository.AccountMembershipRepository;
 import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.CustomerRepository;
+import com.jiyuu.banking.repository.specification.AccountSpecification;
 import com.jiyuu.banking.utils.AccountNumberGenerator;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -37,7 +46,7 @@ public class AccountService {
                 .currencyAccount(Currency.valueOf(accountRequest.currency()))
                 .soldeAccount(BigDecimal.ZERO)
                 .decouvert(accountRequest.decouvert())
-                .isDecouvert(false)
+                .estDecouvert(false)
                 .build();
 
         account = this.accountRepository.save(account);
@@ -86,5 +95,26 @@ public class AccountService {
         this.accountMembershipRepository.delete(accountMembership);
     }
 
+    public PagedResponse<AccountResponse> getAccounts(AccountSearchCriteria accountSearchCriteria, int page, int size, String soortBy, String direction) {
+        Specification<Account> spec = AccountSpecification.withFiler(accountSearchCriteria);
+
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(soortBy).descending()
+                : Sort.by(soortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<AccountResponse> accounts = this.accountRepository
+                .findAll(spec, pageable)
+                .map(AccountResponse::of);
+
+        return PagedResponse.of(accounts);
+    }
+
+    public AccountResponse getAccount(long id) {
+        Account account = this.accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+        return AccountResponse.of(account);
+    }
 
 }
