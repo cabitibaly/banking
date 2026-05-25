@@ -64,6 +64,8 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.DELETE, "/accounts/membership/{idAccount}/{idCustomer}").hasAnyAuthority("ADMINISTRATOR_DELETE", "AGENT_DELETE")
                                         .requestMatchers(HttpMethod.GET, "/accounts").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ")
                                         .requestMatchers(HttpMethod.GET, "/accounts/{idAccount}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
+                                        .requestMatchers(HttpMethod.POST, "/transactions").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE", "CUSTOMER_CREATE")
+                                        .requestMatchers(HttpMethod.GET, "/transactions/ref").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .anyRequest().authenticated()
                 )
                 .sessionManagement(httpSecuritySessionManagementConfigurer ->

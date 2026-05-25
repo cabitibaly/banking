@@ -1,0 +1,105 @@
+package com.jiyuu.banking.service;
+
+import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.dto.TransactionRequest;
+import com.jiyuu.banking.dto.TransactionResponse;
+import com.jiyuu.banking.entity.Account;
+import com.jiyuu.banking.entity.AccountMembership;
+import com.jiyuu.banking.entity.Transactions;
+import com.jiyuu.banking.enums.Currency;
+import com.jiyuu.banking.enums.TransactionStatus;
+import com.jiyuu.banking.enums.TransactionType;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
+import com.jiyuu.banking.repository.AccountMembershipRepository;
+import com.jiyuu.banking.repository.AccountRepository;
+import com.jiyuu.banking.repository.TransactionsRepository;
+
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Slf4j
+@Service
+@AllArgsConstructor
+public class TransactionsService {
+    private final TransactionsRepository transactionsRepository;
+    private final AccountRepository accountRepository;
+    private final AccountMembershipRepository accountMembershipRepository;
+    private final ProcessTransactionService processTransactionService;
+
+    public TransactionResponse createTransaction(TransactionRequest request) {
+        Account source = null;
+        Account target = null;
+
+        if (request.target() != null) {
+            target = accountRepository.findById(request.target())
+                    .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
+        }
+
+        if (request.source() != null) {
+            source = accountRepository.findById(request.source())
+                    .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
+        }
+
+        Transactions tx = Transactions.builder()
+                .transactionRef(UUID.randomUUID().toString())
+                .currencyTransaction(Currency.valueOf(request.currency()))
+                .transactionType(TransactionType.valueOf(request.type()))
+                .amountTransaction(request.amount())
+                .transactionStatus(TransactionStatus.PENDING)
+                .sourceAccount(source)
+                .targetAccount(target)
+                .build();
+
+        tx = transactionsRepository.save(tx);
+        long txId = tx.getIdTransaction();
+
+        try {
+            this.processTransactionService.process(request);
+            transactionsRepository.updateStatus(txId, TransactionStatus.COMPLETED);
+        } catch (Exception e) {
+            transactionsRepository.updateStatus(txId, TransactionStatus.FAILED);
+            throw e;
+        }
+
+        return toResponse(transactionsRepository.findById(txId).orElseThrow());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateStatus(Long idTransaction, TransactionStatus transactionStatus) {
+        Transactions tx = transactionsRepository.findById(idTransaction)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+        tx.setTransactionStatus(transactionStatus);
+    }
+
+    private TransactionResponse toResponse(Transactions tx) {
+        String source = resolverAccountNumber(tx.getSourceAccount());
+        String target = resolverAccountNumber(tx.getTargetAccount());
+
+        return TransactionResponse.of(tx, source, target);
+    }
+
+    private String resolverAccountNumber(Account account) {
+        if (account == null) return null;
+
+        return this.accountMembershipRepository.findByAccount_idAccount(account.getIdAccount())
+                .stream()
+                .filter(AccountMembership::isPrimary)
+                .map(m -> m.getAccount().getNumeroAccount())
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Auditable(action = "READ", entity = "TRANSACTION")
+    public TransactionResponse getTransactionByRef(String ref) {
+        Transactions tx = this.transactionsRepository.findByTransactionRef(ref)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+
+        return toResponse(tx);
+    }
+
+}

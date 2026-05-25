@@ -48,4 +48,10 @@ public class Account extends BaseEntity {
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<AccountMembership> accountMembershipList = new ArrayList<>();
 
+    @OneToMany(mappedBy = "sourceAccount", fetch = FetchType.LAZY)
+    private List<Transactions> outgointTransactions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "targetAccount", fetch = FetchType.LAZY)
+    private List<Transactions> incommingTransactions = new ArrayList<>();
+
 }
