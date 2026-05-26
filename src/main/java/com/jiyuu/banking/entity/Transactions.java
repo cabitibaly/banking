@@ -38,6 +38,9 @@ public class Transactions extends BaseEntity{
     @Column(nullable = false)
     private TransactionStatus transactionStatus;
 
+    @Column(nullable = true)
+    private String originalTransactionRef;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_id_account")
     private Account sourceAccount;

@@ -10,6 +10,7 @@ import com.jiyuu.banking.enums.Currency;
 import com.jiyuu.banking.enums.TransactionStatus;
 import com.jiyuu.banking.enums.TransactionType;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
+import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.AccountMembershipRepository;
 import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.TransactionsRepository;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Slf4j
@@ -100,6 +103,54 @@ public class TransactionsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         return toResponse(tx);
+    }
+
+
+    @Transactional
+    public TransactionResponse reverseTransaction(String ref) {
+        Transactions originalTx = this.transactionsRepository.findByTransactionRef(ref)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+
+        if (LocalDateTime.now().isAfter(originalTx.getCreatedAt().plusHours(24))) {
+            throw new ValidationException("Impossible d'annuler la transaction après 24 heures");
+        }
+
+        if (originalTx.getTransactionStatus() == TransactionStatus.REVERSED) {
+            throw new ValidationException("Transaction déjà annulée");
+        }
+
+        if (originalTx.getTransactionStatus() != TransactionStatus.COMPLETED) {
+            throw new ValidationException("Transaction non annulable");
+        }
+
+        Account source = originalTx.getSourceAccount();
+        Account target = originalTx.getTargetAccount();
+        BigDecimal amount = originalTx.getAmountTransaction();
+
+        if (source != null) {
+            source.setSoldeAccount(source.getSoldeAccount().add(amount));
+        }
+
+        if (target != null) {
+            target.setSoldeAccount(target.getSoldeAccount().subtract(amount));
+        }
+
+        Transactions reversedTx = Transactions.builder()
+                .transactionRef(UUID.randomUUID().toString())
+                .originalTransactionRef(originalTx.getTransactionRef())
+                .currencyTransaction(originalTx.getCurrencyTransaction())
+                .transactionType(TransactionType.REVERSAL)
+                .amountTransaction(originalTx.getAmountTransaction())
+                .transactionStatus(TransactionStatus.COMPLETED)
+                .sourceAccount(source)
+                .targetAccount(target)
+                .build();
+
+        reversedTx = transactionsRepository.save(reversedTx);
+
+        originalTx.setTransactionStatus(TransactionStatus.REVERSED);
+
+        return toResponse(reversedTx);
     }
 
 }

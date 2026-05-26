@@ -5,5 +5,6 @@ public enum TransactionType {
     WITHDRAW,
     TRANSFER,
     INTEREST,
-    FEE
+    FEE,
+    REVERSAL
 }

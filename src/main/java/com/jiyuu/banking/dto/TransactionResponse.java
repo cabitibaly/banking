@@ -10,6 +10,7 @@ public record TransactionResponse(
         String type,
         BigDecimal amount,
         String status,
+        String originalTransactionRef,
         String source,
         String target
 ) {
@@ -21,6 +22,7 @@ public record TransactionResponse(
                 transactions.getTransactionType().name(),
                 transactions.getAmountTransaction(),
                 transactions.getTransactionStatus().name(),
+                transactions.getOriginalTransactionRef(),
                 source,
                 target
         );

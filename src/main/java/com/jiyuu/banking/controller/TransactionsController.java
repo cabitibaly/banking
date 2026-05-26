@@ -46,5 +46,19 @@ public class TransactionsController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @PostMapping("/{ref}/reverse")
+    public ResponseEntity<ApiResponse<TransactionResponse>> reverseTransaction(@PathVariable("ref") String ref) {
+        TransactionResponse transactionResponse = this.transactionsService.reverseTransaction(ref);
+
+        ApiResponse<TransactionResponse> response = new ApiResponse<>(
+                transactionResponse,
+                "Annulation de transaction réussie",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }
 
