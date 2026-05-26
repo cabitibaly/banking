@@ -44,7 +44,7 @@ public class AccountService {
         this.customerRepository = customerRepository;
     }
 
-    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
+//    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
     public void createAccount(AccountRequest accountRequest) {
         Customer customer = this.customerRepository.findById(accountRequest.idCustomer())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -57,7 +57,6 @@ public class AccountService {
                 .currencyAccount(Currency.valueOf(accountRequest.currency()))
                 .soldeAccount(BigDecimal.ZERO)
                 .decouvert(accountRequest.decouvert())
-                .estDecouvert(false)
                 .build();
 
         account = this.accountRepository.save(account);

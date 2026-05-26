@@ -11,8 +11,7 @@ public record AccountResponse(
         String status,
         String currency,
         BigDecimal solde,
-        BigDecimal decouvert,
-        boolean isDecouvert
+        BigDecimal decouvert
 ) {
     public static AccountResponse of(Account account) {
         return new AccountResponse(
@@ -22,8 +21,7 @@ public record AccountResponse(
                 account.getAccountStatus().toString(),
                 account.getCurrencyAccount().toString(),
                 account.getSoldeAccount(),
-                account.getDecouvert(),
-                account.isEstDecouvert()
+                account.getDecouvert()
         );
     }
 }
