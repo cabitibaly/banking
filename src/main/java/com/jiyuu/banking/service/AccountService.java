@@ -1,10 +1,7 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
-import com.jiyuu.banking.dto.AccountRequest;
-import com.jiyuu.banking.dto.AccountResponse;
-import com.jiyuu.banking.dto.AccountSearchCriteria;
-import com.jiyuu.banking.dto.PagedResponse;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.AccountMembership;
 import com.jiyuu.banking.entity.Customer;
@@ -17,6 +14,7 @@ import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.AccountMembershipRepository;
 import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.CustomerRepository;
+import com.jiyuu.banking.repository.TransactionsRepository;
 import com.jiyuu.banking.repository.specification.AccountSpecification;
 import com.jiyuu.banking.utils.AccountNumberGenerator;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,15 +31,19 @@ import java.math.BigDecimal;
 public class AccountService {
     private final AccountRepository accountRepository;
     private final AccountMembershipRepository accountMembershipRepository;
+    private final TransactionsRepository transactionsRepository;
     private final CustomerRepository customerRepository;
+    private final TransactionsService transactionsService;
 
     @Value("${max-decouvert}")
     private long MAX_DECOUVERT;
 
-    public AccountService(AccountRepository accountRepository, AccountMembershipRepository accountMembershipRepository, CustomerRepository customerRepository) {
+    public AccountService(AccountRepository accountRepository, AccountMembershipRepository accountMembershipRepository, TransactionsRepository transactionsRepository, CustomerRepository customerRepository, TransactionsService transactionsService) {
         this.accountRepository = accountRepository;
         this.accountMembershipRepository = accountMembershipRepository;
+        this.transactionsRepository = transactionsRepository;
         this.customerRepository = customerRepository;
+        this.transactionsService = transactionsService;
     }
 
 //    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
@@ -122,12 +124,12 @@ public class AccountService {
     }
 
     @Auditable(action = "READ", entity = "ACCOUNT")
-    public PagedResponse<AccountResponse> getAccounts(AccountSearchCriteria accountSearchCriteria, int page, int size, String soortBy, String direction) {
+    public PagedResponse<AccountResponse> getAccounts(AccountSearchCriteria accountSearchCriteria, int page, int size, String sortBy, String direction) {
         Specification<Account> spec = AccountSpecification.withFiler(accountSearchCriteria);
 
         Sort sort = direction.equalsIgnoreCase("desc")
-                ? Sort.by(soortBy).descending()
-                : Sort.by(soortBy).ascending();
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<AccountResponse> accounts = this.accountRepository
@@ -144,5 +146,20 @@ public class AccountService {
 
         return AccountResponse.of(account);
     }
+
+    @Auditable(action = "READ", entity = "TRANSACTION")
+    public PagedResponse<TransactionResponse> getMyTransactions(Long idAccount, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<TransactionResponse> transactions = this.transactionsRepository
+                .findBySourceAccount_IdAccountOrTargetAccount_IdAccount(idAccount, idAccount, pageable)
+                .map(this.transactionsService::toResponse);
+
+        return PagedResponse.of(transactions);
+    }
+
 
 }

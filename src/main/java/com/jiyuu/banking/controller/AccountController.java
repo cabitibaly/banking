@@ -111,4 +111,24 @@ public class AccountController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @GetMapping("/{idAccount}/transactions")
+    public ResponseEntity<ApiResponse<PagedResponse<TransactionResponse>>> getAccountTransactions(
+            @PathVariable long idAccount,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size,
+            @RequestParam(name = "sort", required = false, defaultValue = "idTransaction") String sort,
+            @RequestParam(name = "direction", required = false, defaultValue = "asc") String direction
+    ) {
+        PagedResponse<TransactionResponse> transactions = this.accountService.getMyTransactions(idAccount, page, size, sort, direction);
+
+        ApiResponse<PagedResponse<TransactionResponse>> response = new ApiResponse<>(
+                transactions,
+                "La liste de toutes les transactions",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

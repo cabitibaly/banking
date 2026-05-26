@@ -79,7 +79,7 @@ public class TransactionsService {
         tx.setTransactionStatus(transactionStatus);
     }
 
-    private TransactionResponse toResponse(Transactions tx) {
+    public TransactionResponse toResponse(Transactions tx) {
         String source = resolverAccountNumber(tx.getSourceAccount());
         String target = resolverAccountNumber(tx.getTargetAccount());
 

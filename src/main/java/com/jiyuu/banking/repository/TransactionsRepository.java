@@ -1,7 +1,10 @@
 package com.jiyuu.banking.repository;
 
+import com.jiyuu.banking.dto.TransactionResponse;
 import com.jiyuu.banking.entity.Transactions;
 import com.jiyuu.banking.enums.TransactionStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -18,4 +21,6 @@ public interface TransactionsRepository extends JpaRepository<Transactions, Long
     @Transactional
     @Query("UPDATE Transactions t SET t.transactionStatus = :status WHERE t.idTransaction = :id")
     void updateStatus(@Param("id") Long id, @Param("status") TransactionStatus status);
+
+    Page<Transactions> findBySourceAccount_IdAccountOrTargetAccount_IdAccount(long source, long target, Pageable pageable);
 }
