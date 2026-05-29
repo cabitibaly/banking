@@ -12,7 +12,8 @@ public record TransactionResponse(
         String status,
         String originalTransactionRef,
         String source,
-        String target
+        String target,
+        String createdAt
 ) {
     public static TransactionResponse of(Transactions transactions, String source, String target) {
         return new TransactionResponse(
@@ -24,7 +25,8 @@ public record TransactionResponse(
                 transactions.getTransactionStatus().name(),
                 transactions.getOriginalTransactionRef(),
                 source,
-                target
+                target,
+                transactions.getCreatedAt().toString()
         );
     }
 }

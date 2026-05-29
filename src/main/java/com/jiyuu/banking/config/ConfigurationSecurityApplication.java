@@ -67,6 +67,7 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.GET, "/accounts/{idAccount}/transactions").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .requestMatchers(HttpMethod.POST, "/transactions").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE", "CUSTOMER_CREATE")
                                         .requestMatchers(HttpMethod.GET, "/transactions/{ref}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
+                                        .requestMatchers(HttpMethod.GET, "/transactions/period/{start}/{end}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .requestMatchers(HttpMethod.POST, "/transactions/{ref}/reverse").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE")
                                         .anyRequest().authenticated()
                 )

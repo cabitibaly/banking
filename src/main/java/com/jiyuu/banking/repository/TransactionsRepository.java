@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface TransactionsRepository extends JpaRepository<Transactions, Long>, JpaSpecificationExecutor<Transactions> {
@@ -22,5 +23,4 @@ public interface TransactionsRepository extends JpaRepository<Transactions, Long
     @Query("UPDATE Transactions t SET t.transactionStatus = :status WHERE t.idTransaction = :id")
     void updateStatus(@Param("id") Long id, @Param("status") TransactionStatus status);
 
-    Page<Transactions> findBySourceAccount_IdAccountOrTargetAccount_IdAccount(long source, long target, Pageable pageable);
 }

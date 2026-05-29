@@ -5,6 +5,7 @@ import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.AccountMembership;
 import com.jiyuu.banking.entity.Customer;
+import com.jiyuu.banking.entity.Transactions;
 import com.jiyuu.banking.enums.AccountStatus;
 import com.jiyuu.banking.enums.AccountType;
 import com.jiyuu.banking.enums.Currency;
@@ -16,6 +17,7 @@ import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.CustomerRepository;
 import com.jiyuu.banking.repository.TransactionsRepository;
 import com.jiyuu.banking.repository.specification.AccountSpecification;
+import com.jiyuu.banking.repository.specification.TransactionsSpecification;
 import com.jiyuu.banking.utils.AccountNumberGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -26,6 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 public class AccountService {
@@ -148,18 +151,30 @@ public class AccountService {
     }
 
     @Auditable(action = "READ", entity = "TRANSACTION")
-    public PagedResponse<TransactionResponse> getMyTransactions(Long idAccount, int page, int size, String sortBy, String direction) {
+    public PagedResponse<TransactionResponse> getMyTransactions(
+            Long idAccount,
+            String start,
+            String end,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        LocalDateTime startDate = start == null || start.isEmpty()  ? null : LocalDateTime.parse(start);
+        LocalDateTime endDate =  end == null || end.isEmpty() ? null : LocalDateTime.parse(end);
+        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate);
+
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
+
         Page<TransactionResponse> transactions = this.transactionsRepository
-                .findBySourceAccount_IdAccountOrTargetAccount_IdAccount(idAccount, idAccount, pageable)
+                .findAll(spec, pageable)
                 .map(this.transactionsService::toResponse);
 
         return PagedResponse.of(transactions);
     }
-
 
 }

@@ -105,7 +105,6 @@ public class TransactionsService {
         return toResponse(tx);
     }
 
-
     @Transactional
     public TransactionResponse reverseTransaction(String ref) {
         Transactions originalTx = this.transactionsRepository.findByTransactionRef(ref)
