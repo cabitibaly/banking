@@ -19,6 +19,9 @@ import com.jiyuu.banking.repository.TransactionsRepository;
 import com.jiyuu.banking.repository.specification.AccountSpecification;
 import com.jiyuu.banking.repository.specification.TransactionsSpecification;
 import com.jiyuu.banking.utils.AccountNumberGenerator;
+import jakarta.mail.MessagingException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,9 +29,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class AccountService {
@@ -37,16 +45,28 @@ public class AccountService {
     private final TransactionsRepository transactionsRepository;
     private final CustomerRepository customerRepository;
     private final TransactionsService transactionsService;
+    private final SpringTemplateEngine springTemplateEngine;
+    private final NotificationSender notificationSender;
 
     @Value("${max-decouvert}")
     private long MAX_DECOUVERT;
 
-    public AccountService(AccountRepository accountRepository, AccountMembershipRepository accountMembershipRepository, TransactionsRepository transactionsRepository, CustomerRepository customerRepository, TransactionsService transactionsService) {
+    public AccountService(
+            AccountRepository accountRepository,
+            AccountMembershipRepository accountMembershipRepository,
+            TransactionsRepository transactionsRepository,
+            CustomerRepository customerRepository,
+            TransactionsService transactionsService,
+            SpringTemplateEngine springTemplateEngine,
+            NotificationSender notificationSender
+    ) {
         this.accountRepository = accountRepository;
         this.accountMembershipRepository = accountMembershipRepository;
         this.transactionsRepository = transactionsRepository;
         this.customerRepository = customerRepository;
         this.transactionsService = transactionsService;
+        this.springTemplateEngine = springTemplateEngine;
+        this.notificationSender = notificationSender;
     }
 
 //    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
@@ -175,6 +195,36 @@ public class AccountService {
                 .map(this.transactionsService::toResponse);
 
         return PagedResponse.of(transactions);
+    }
+
+    public void statement(long idAccount, String start, String end) throws MessagingException {
+        LocalDateTime startDate = start == null || start.isEmpty()  ? null : LocalDateTime.parse(start);
+        LocalDateTime endDate =  end == null || end.isEmpty() ? null : LocalDateTime.parse(end);
+        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate);
+
+        List<TransactionResponse> transactions = this.transactionsRepository
+                .findAll(spec)
+                .stream()
+                .map(this.transactionsService::toResponse)
+                .toList();
+
+        Context context = new Context();
+        context.setVariable("transactions", transactions);
+        context.setVariable("start", startDate.toString());
+        context.setVariable("end", endDate.toString());
+        String html = springTemplateEngine.process("transactions-report", context);
+
+        Document document = Jsoup.parse(html);
+        document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        String xhtml = document.html();
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocumentFromString(xhtml, "http://localhost:8080/");
+        renderer.layout();
+        renderer.createPDF(stream);
+        byte[] pdf = stream.toByteArray();
+        this.notificationSender.sendTransactionReport("test@example.com", pdf);
     }
 
 }

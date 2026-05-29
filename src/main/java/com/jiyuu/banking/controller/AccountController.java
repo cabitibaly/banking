@@ -2,6 +2,7 @@ package com.jiyuu.banking.controller;
 
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.service.AccountService;
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -127,6 +128,24 @@ public class AccountController {
 
         ApiResponse<PagedResponse<TransactionResponse>> response = new ApiResponse<>(
                 transactions,
+                "La liste de toutes les transactions",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{idAccount}/statement")
+    public ResponseEntity<ApiResponse<?>> statement(
+            @PathVariable long idAccount,
+            @RequestParam(name = "start", required = false) String start,
+            @RequestParam(name = "end", required = false) String end
+    ) throws MessagingException {
+        this.accountService.statement(idAccount, start, end);
+
+        ApiResponse<Void> response = new ApiResponse<>(
+                null,
                 "La liste de toutes les transactions",
                 HttpStatus.OK.value(),
                 Instant.now()

@@ -7,11 +7,13 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 180px;
             margin: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            gap: 120px;
         }
 
         .header {
@@ -30,14 +32,14 @@
         }
 
         table {
-            width: 90%;
+            width: 98%;
             border-collapse: collapse;
         }
 
         th, td {
             border: 1px solid #000;
-            padding: 6px;
-            text-align: center;
+            padding: 120px;
+            text-align: left;
         }
 
         th {
@@ -45,9 +47,9 @@
         }
 
         .footer {
-            margin-top: 20px;
+            margin-top: 100px;
             text-align: right;
-            font-size: 10px;
+            font-size: 100px;
         }
     </style>
 </head>
@@ -80,10 +82,10 @@
     <tbody>
     <tr th:each="t : ${transactions}">
         <td th:text="${t.transactionRef}"></td>
-        <td th:text="${t.transactionType}"></td>
-        <td th:text="${t.amountTransaction}"></td>
-        <td th:text="${t.currencyTransaction}"></td>
-        <td th:text="${t.transactionStatus}"></td>
+        <td th:text="${t.type}"></td>
+        <td th:text="${t.amount}"></td>
+        <td th:text="${t.currency}"></td>
+        <td th:text="${t.status}"></td>
         <td th:text="${t.createdAt}"></td>
     </tr>
     </tbody>
