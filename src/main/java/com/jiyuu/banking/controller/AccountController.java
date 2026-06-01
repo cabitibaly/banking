@@ -2,6 +2,7 @@ package com.jiyuu.banking.controller;
 
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.service.AccountService;
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -105,6 +106,47 @@ public class AccountController {
         ApiResponse<AccountResponse> response = new ApiResponse<>(
                 account,
                 "Le compte a été trouvé",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{idAccount}/transactions")
+    public ResponseEntity<ApiResponse<PagedResponse<TransactionResponse>>> getAccountTransactions(
+            @PathVariable long idAccount,
+            @RequestParam(name = "start", required = false) String start,
+            @RequestParam(name = "end", required = false) String end,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size,
+            @RequestParam(name = "sort", required = false, defaultValue = "idTransaction") String sort,
+            @RequestParam(name = "direction", required = false, defaultValue = "asc") String direction
+    ) {
+        PagedResponse<TransactionResponse> transactions = this.accountService
+                .getMyTransactions(idAccount, start, end, page, size, sort, direction);
+
+        ApiResponse<PagedResponse<TransactionResponse>> response = new ApiResponse<>(
+                transactions,
+                "La liste de toutes les transactions",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{idAccount}/statement")
+    public ResponseEntity<ApiResponse<?>> statement(
+            @PathVariable long idAccount,
+            @RequestParam(name = "start", required = false) String start,
+            @RequestParam(name = "end", required = false) String end
+    ) throws MessagingException {
+        this.accountService.statement(idAccount, start, end);
+
+        ApiResponse<Void> response = new ApiResponse<>(
+                null,
+                "La liste de toutes les transactions",
                 HttpStatus.OK.value(),
                 Instant.now()
         );

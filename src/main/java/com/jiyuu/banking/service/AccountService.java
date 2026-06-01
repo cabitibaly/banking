@@ -1,13 +1,11 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
-import com.jiyuu.banking.dto.AccountRequest;
-import com.jiyuu.banking.dto.AccountResponse;
-import com.jiyuu.banking.dto.AccountSearchCriteria;
-import com.jiyuu.banking.dto.PagedResponse;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.AccountMembership;
 import com.jiyuu.banking.entity.Customer;
+import com.jiyuu.banking.entity.Transactions;
 import com.jiyuu.banking.enums.AccountStatus;
 import com.jiyuu.banking.enums.AccountType;
 import com.jiyuu.banking.enums.Currency;
@@ -17,8 +15,13 @@ import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.AccountMembershipRepository;
 import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.CustomerRepository;
+import com.jiyuu.banking.repository.TransactionsRepository;
 import com.jiyuu.banking.repository.specification.AccountSpecification;
+import com.jiyuu.banking.repository.specification.TransactionsSpecification;
 import com.jiyuu.banking.utils.AccountNumberGenerator;
+import jakarta.mail.MessagingException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,25 +29,47 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class AccountService {
     private final AccountRepository accountRepository;
     private final AccountMembershipRepository accountMembershipRepository;
+    private final TransactionsRepository transactionsRepository;
     private final CustomerRepository customerRepository;
+    private final TransactionsService transactionsService;
+    private final SpringTemplateEngine springTemplateEngine;
+    private final NotificationSender notificationSender;
 
     @Value("${max-decouvert}")
     private long MAX_DECOUVERT;
 
-    public AccountService(AccountRepository accountRepository, AccountMembershipRepository accountMembershipRepository, CustomerRepository customerRepository) {
+    public AccountService(
+            AccountRepository accountRepository,
+            AccountMembershipRepository accountMembershipRepository,
+            TransactionsRepository transactionsRepository,
+            CustomerRepository customerRepository,
+            TransactionsService transactionsService,
+            SpringTemplateEngine springTemplateEngine,
+            NotificationSender notificationSender
+    ) {
         this.accountRepository = accountRepository;
         this.accountMembershipRepository = accountMembershipRepository;
+        this.transactionsRepository = transactionsRepository;
         this.customerRepository = customerRepository;
+        this.transactionsService = transactionsService;
+        this.springTemplateEngine = springTemplateEngine;
+        this.notificationSender = notificationSender;
     }
 
-    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
+//    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
     public void createAccount(AccountRequest accountRequest) {
         Customer customer = this.customerRepository.findById(accountRequest.idCustomer())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -57,7 +82,6 @@ public class AccountService {
                 .currencyAccount(Currency.valueOf(accountRequest.currency()))
                 .soldeAccount(BigDecimal.ZERO)
                 .decouvert(accountRequest.decouvert())
-                .estDecouvert(false)
                 .build();
 
         account = this.accountRepository.save(account);
@@ -123,12 +147,12 @@ public class AccountService {
     }
 
     @Auditable(action = "READ", entity = "ACCOUNT")
-    public PagedResponse<AccountResponse> getAccounts(AccountSearchCriteria accountSearchCriteria, int page, int size, String soortBy, String direction) {
+    public PagedResponse<AccountResponse> getAccounts(AccountSearchCriteria accountSearchCriteria, int page, int size, String sortBy, String direction) {
         Specification<Account> spec = AccountSpecification.withFiler(accountSearchCriteria);
 
         Sort sort = direction.equalsIgnoreCase("desc")
-                ? Sort.by(soortBy).descending()
-                : Sort.by(soortBy).ascending();
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<AccountResponse> accounts = this.accountRepository
@@ -144,6 +168,63 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         return AccountResponse.of(account);
+    }
+
+    @Auditable(action = "READ", entity = "TRANSACTION")
+    public PagedResponse<TransactionResponse> getMyTransactions(
+            Long idAccount,
+            String start,
+            String end,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        LocalDateTime startDate = start == null || start.isEmpty()  ? null : LocalDateTime.parse(start);
+        LocalDateTime endDate =  end == null || end.isEmpty() ? null : LocalDateTime.parse(end);
+        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate);
+
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<TransactionResponse> transactions = this.transactionsRepository
+                .findAll(spec, pageable)
+                .map(this.transactionsService::toResponse);
+
+        return PagedResponse.of(transactions);
+    }
+
+    public void statement(long idAccount, String start, String end) throws MessagingException {
+        LocalDateTime startDate = start == null || start.isEmpty()  ? null : LocalDateTime.parse(start);
+        LocalDateTime endDate =  end == null || end.isEmpty() ? null : LocalDateTime.parse(end);
+        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate);
+
+        List<TransactionResponse> transactions = this.transactionsRepository
+                .findAll(spec)
+                .stream()
+                .map(this.transactionsService::toResponse)
+                .toList();
+
+        Context context = new Context();
+        context.setVariable("transactions", transactions);
+        context.setVariable("start", startDate.toString());
+        context.setVariable("end", endDate.toString());
+        String html = springTemplateEngine.process("transactions-report", context);
+
+        Document document = Jsoup.parse(html);
+        document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        String xhtml = document.html();
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocumentFromString(xhtml, "http://localhost:8080/");
+        renderer.layout();
+        renderer.createPDF(stream);
+        byte[] pdf = stream.toByteArray();
+        this.notificationSender.sendTransactionReport("test@example.com", pdf);
     }
 
 }
