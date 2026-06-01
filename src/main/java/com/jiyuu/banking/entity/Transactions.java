@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Builder
@@ -48,4 +50,12 @@ public class Transactions extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_id_account")
     private Account targetAccount;
+
+    @ManyToMany
+    @JoinTable(
+            name = "early_repayment_installments",
+            joinColumns = @JoinColumn(name = "id_transaction"),
+            inverseJoinColumns = @JoinColumn(name = "id_installment")
+    )
+    private List<LoanInstallment> installments = new ArrayList<>();
 }
