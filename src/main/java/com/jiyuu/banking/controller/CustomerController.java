@@ -88,8 +88,8 @@ public class CustomerController {
     }
 
     @PostMapping("/{idCustomer}/kyc")
-    public ResponseEntity<ApiResponse<?>> addKycDocument(@PathVariable("idCustomer") long id, @Valid @RequestBody KycDocumentRequest kycDocumentRequest) {
-        this.customerService.addKycDocument(id, kycDocumentRequest);
+    public ResponseEntity<ApiResponse<?>> addKycDocument(@PathVariable("idCustomer") long id, @Valid @RequestBody DocumentRequest documentRequest) {
+        this.customerService.addKycDocument(id, documentRequest);
         ApiResponse<?> response = new ApiResponse<>(
                 null,
                 "Ajout du document réussi",
