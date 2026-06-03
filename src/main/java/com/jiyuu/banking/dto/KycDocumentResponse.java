@@ -1,6 +1,7 @@
 package com.jiyuu.banking.dto;
 
 import com.jiyuu.banking.entity.KycDocument;
+import com.jiyuu.banking.entity.LoanDocument;
 
 public record KycDocumentResponse(
         long id,
@@ -14,6 +15,15 @@ public record KycDocumentResponse(
                 kycDocument.getFileUrl(),
                 kycDocument.getKycType().toString(),
                 kycDocument.getKycStatus().toString()
+        );
+    }
+
+    public static KycDocumentResponse toLoanDocument(LoanDocument loanDocument) {
+        return new KycDocumentResponse(
+                loanDocument.getIdLoanDocument(),
+                loanDocument.getUrlDocument(),
+                loanDocument.getDocumentType().toString(),
+                null
         );
     }
 }

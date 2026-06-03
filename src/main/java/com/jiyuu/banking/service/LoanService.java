@@ -1,8 +1,6 @@
 package com.jiyuu.banking.service;
 
-import com.jiyuu.banking.dto.DocumentRequest;
-import com.jiyuu.banking.dto.LoanBaseResponse;
-import com.jiyuu.banking.dto.LoanRequest;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.Customer;
 import com.jiyuu.banking.entity.Loan;
@@ -17,9 +15,16 @@ import com.jiyuu.banking.repository.CustomerRepository;
 import com.jiyuu.banking.repository.LoanDocumentRepository;
 import com.jiyuu.banking.repository.LoanRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
 
 @Service
 @AllArgsConstructor
@@ -62,6 +67,18 @@ public class LoanService {
         Loan loan = this.loanRepository.findById(idLoan)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce crédit n'existe pas"));
 
+        Set <LoanStatus> statuses = EnumSet.of(
+                LoanStatus.APPROVED,
+                LoanStatus.REJECTED,
+                LoanStatus.ACTIVE,
+                LoanStatus.CLOSED,
+                LoanStatus.UNDER_REVIEW
+        );
+
+        if(statuses.contains(loan.getLoanStatus())) {
+            throw new ValidationException("Ce crédit a dejà été traité ou est en cours de traitement");
+        }
+
         loan.getDocuments().forEach(loanDocument -> {
             if (loanDocument.getDocumentType().toString().equals(request.kycType())) {
                 throw new ValidationException(
@@ -76,6 +93,74 @@ public class LoanService {
                 .urlDocument(request.fileUrl())
                 .build();
 
+        if(loan.getLoanStatus() == LoanStatus.DRAFT) {
+            loan.setLoanStatus(LoanStatus.PENDING);
+        }
+
+
         this.loanDocumentRepository.save(loanDocument);
+    }
+
+    public PagedResponse<LoanBaseResponse> AllLoans(int page, int size, String soortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(soortBy).descending()
+                : Sort.by(soortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<LoanBaseResponse> loans = this.loanRepository
+                .findAll(pageable)
+                .map(LoanBaseResponse::of);
+
+        return PagedResponse.of(loans);
+    }
+
+    public LoanWithDocumentResponse getLoan(long id) {
+        Loan loan = this.loanRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Ce crédit n'existe pas")
+        );
+
+        return LoanWithDocumentResponse.of(loan);
+    }
+
+    public void approveLoan(long id) {
+        Loan loan = this.loanRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Ce crédit n'existe pas")
+        );
+
+        Set<LoanStatus> statuses = EnumSet.of(
+                LoanStatus.APPROVED,
+                LoanStatus.REJECTED,
+                LoanStatus.ACTIVE,
+                LoanStatus.CLOSED,
+                LoanStatus.UNDER_REVIEW
+        );
+
+        if(statuses.contains(loan.getLoanStatus())) {
+            throw new ValidationException("Ce crédit a dejà été traité.");
+        }
+
+        loan.setLoanStatus(LoanStatus.APPROVED);
+        this.loanRepository.save(loan);
+    }
+
+    public void rejectLoan(long id) {
+        Loan loan = this.loanRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Ce crédit n'existe pas")
+        );
+
+        Set<LoanStatus> statuses = EnumSet.of(
+                LoanStatus.APPROVED,
+                LoanStatus.REJECTED,
+                LoanStatus.ACTIVE,
+                LoanStatus.CLOSED,
+                LoanStatus.UNDER_REVIEW
+        );
+
+        if(statuses.contains(loan.getLoanStatus())) {
+            throw new ValidationException("Ce crédit a dejà été traité.");
+        }
+
+        loan.setLoanStatus(LoanStatus.REJECTED);
+        this.loanRepository.save(loan);
     }
 }

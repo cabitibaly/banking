@@ -40,9 +40,11 @@ public class Loan extends BaseEntity{
 
     private BigDecimal remainingAmount;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private LoanStatus loanStatus;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private LoanType loanType;
 

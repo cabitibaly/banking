@@ -1,9 +1,6 @@
 package com.jiyuu.banking.controller;
 
-import com.jiyuu.banking.dto.ApiResponse;
-import com.jiyuu.banking.dto.DocumentRequest;
-import com.jiyuu.banking.dto.LoanBaseResponse;
-import com.jiyuu.banking.dto.LoanRequest;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.service.LoanService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -48,5 +45,66 @@ public class LoanController {
         );
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{idLoan}")
+    public ResponseEntity<ApiResponse<LoanWithDocumentResponse>> getLoan(@PathVariable("idLoan") long id) {
+        LoanWithDocumentResponse loan = this.loanService.getLoan(id);
+
+        ApiResponse<LoanWithDocumentResponse> response = new ApiResponse<>(
+                loan,
+                "Le crédit a bien été récupéré",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<PagedResponse<LoanBaseResponse>>> getLoans(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "idLoan") String sort,
+            @RequestParam(name = "direction", defaultValue = "asc") String direction
+    ) {
+        PagedResponse<LoanBaseResponse> loans = this.loanService.AllLoans(page, size, sort, direction);
+
+        ApiResponse<PagedResponse<LoanBaseResponse>> response = new ApiResponse<>(
+                loans,
+                "Les crédits ont bien été récupérés",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{idLoan}/approve")
+    public ResponseEntity<ApiResponse<?>> approve(@PathVariable(name = "idLoan") long id) {
+        this.loanService.approveLoan(id);
+
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Le crédit a été approuvé.",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{idLoan}/reject")
+    public ResponseEntity<ApiResponse<?>> reject(@PathVariable(name = "idLoan") long id) {
+        this.loanService.rejectLoan(id);
+
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Le crédit a été rejeté.",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

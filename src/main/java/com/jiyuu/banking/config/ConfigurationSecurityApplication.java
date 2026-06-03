@@ -71,6 +71,10 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.POST, "/transactions/{ref}/reverse").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE")
                                         .requestMatchers(HttpMethod.POST, "/loans").hasAuthority("CUSTOMER_CREATE")
                                         .requestMatchers(HttpMethod.POST, "/loans/{idLoan}/documents").hasAuthority("CUSTOMER_CREATE")
+                                        .requestMatchers(HttpMethod.GET, "/loans/{idLoan}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
+                                        .requestMatchers(HttpMethod.GET, "/loans").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ")
+                                        .requestMatchers(HttpMethod.PATCH, "/loans/approve").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
+                                        .requestMatchers(HttpMethod.PATCH, "/loans/reject").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .anyRequest().authenticated()
                 )
                 .sessionManagement(httpSecuritySessionManagementConfigurer ->
