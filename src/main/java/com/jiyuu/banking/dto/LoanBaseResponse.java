@@ -12,6 +12,7 @@ public record LoanBaseResponse(
         String reason,
         int duration,
         BigDecimal amount,
+        BigDecimal interestRate,
         String type,
         String status
 ) {
@@ -24,6 +25,7 @@ public record LoanBaseResponse(
                 loan.getReason(),
                 loan.getDuration(),
                 loan.getAmount(),
+                loan.getInterestRate(),
                 loan.getLoanType().toString(),
                 loan.getLoanStatus().toString()
         );

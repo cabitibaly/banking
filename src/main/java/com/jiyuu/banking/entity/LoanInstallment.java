@@ -35,11 +35,12 @@ public class LoanInstallment extends BaseEntity{
     @Column(nullable = false)
     private LocalDate dueDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private InstallmentStatus installmentStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_loan")
+    @JoinColumn(name = "id_loan", nullable = false)
     private Loan loan;
 
     @OneToOne(fetch = FetchType.LAZY)

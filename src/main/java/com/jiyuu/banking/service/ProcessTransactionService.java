@@ -33,7 +33,7 @@ public class ProcessTransactionService {
     }
 
     private void deposit(TransactionRequest request) {
-        Account target = this.accountRepository.findById(request.target())
+        Account target = this.accountRepository.findBynumeroAccount(request.target())
                 .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
 
         if (target.getAccountStatus() != AccountStatus.ACTIVE) {
@@ -44,7 +44,7 @@ public class ProcessTransactionService {
     }
 
     private void withdraw(TransactionRequest request) {
-        Account source = this.accountRepository.findById(request.source())
+        Account source = this.accountRepository.findBynumeroAccount(request.source())
                 .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
 
         if (source.getAccountStatus() != AccountStatus.ACTIVE) {
@@ -62,10 +62,10 @@ public class ProcessTransactionService {
     }
 
     private void transfer(TransactionRequest request) {
-        Account source = this.accountRepository.findById(request.source())
+        Account source = this.accountRepository.findBynumeroAccount(request.source())
                 .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
 
-        Account target = this.accountRepository.findById(request.target())
+        Account target = this.accountRepository.findBynumeroAccount(request.target())
                 .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
 
         if ((source.getAccountStatus() != AccountStatus.ACTIVE) || (target.getAccountStatus() != AccountStatus.ACTIVE)) {
@@ -83,7 +83,7 @@ public class ProcessTransactionService {
     }
 
     private void feeAndInterest(TransactionRequest request) {
-        Account source = this.accountRepository.findById(request.source())
+        Account source = this.accountRepository.findBynumeroAccount(request.source())
                 .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
 
         if (source.getAccountStatus() == AccountStatus.CLOSED) {
@@ -97,7 +97,7 @@ public class ProcessTransactionService {
         BigDecimal finalSolde = source.getSoldeAccount().subtract(request.amount());
         BigDecimal limitDecouvert = source.getDecouvert().negate();
         if (finalSolde.compareTo(limitDecouvert) < 0) {
-            throw new ValidationException("Impossible de transférer le montant demandé car le solde dépassera la limite de découvert autorisée");
+            throw new ValidationException("Impossible d'effectuer l'opération car le solde dépassera la limite de découvert autorisée");
         }
 
         source.setSoldeAccount(source.getSoldeAccount().subtract(request.amount()));

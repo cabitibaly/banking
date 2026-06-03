@@ -37,7 +37,7 @@ public class FeeApplication {
                     .amount(BigDecimal.valueOf(500))
                     .currency("XOF")
                     .type("FEE")
-                    .source(account.getIdAccount())
+                    .source(account.getNumeroAccount())
                     .build();
 
             this.transactionsService.createTransaction(request);

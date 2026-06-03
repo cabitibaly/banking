@@ -22,7 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -33,6 +33,8 @@ public class LoanService {
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final LoanDocumentRepository loanDocumentRepository;
+    private final LoanInstallmentService installmentService;
+    private final TransactionsService transactionsService;
 
     public LoanBaseResponse createLoan(LoanRequest request) {
         if (request.duration() == 0) {
@@ -122,10 +124,19 @@ public class LoanService {
         return LoanWithDocumentResponse.of(loan);
     }
 
-    public void approveLoan(long id) {
+    public void approveLoan(long id, ApproveLoanRequest request) {
+
+        if(request.interest().compareTo(BigDecimal.ZERO) == 0) {
+            throw new ValidationException("L'intérêt doit être supérieur à 0");
+        }
+
         Loan loan = this.loanRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce crédit n'existe pas")
         );
+
+        if (loan.getLoanStatus() == LoanStatus.DRAFT) {
+            throw new ValidationException("Impossible de traiter ce crédit");
+        }
 
         Set<LoanStatus> statuses = EnumSet.of(
                 LoanStatus.APPROVED,
@@ -139,14 +150,32 @@ public class LoanService {
             throw new ValidationException("Ce crédit a dejà été traité.");
         }
 
+        TransactionRequest transactionRequest = TransactionRequest.builder()
+                .amount(loan.getAmount())
+                .currency("XOF")
+                .type("DEPOSIT")
+                .target(loan.getAccount().getNumeroAccount())
+                .build();
+
+        this.transactionsService.createTransaction(transactionRequest);
+
         loan.setLoanStatus(LoanStatus.APPROVED);
-        this.loanRepository.save(loan);
+        loan.setRemainingAmount(loan.getAmount());
+        loan.setDisbursementDate(LocalDate.now());
+        loan.setInterestRate(request.interest());
+        loan.setComments(request.comments());
+
+        this.installmentService.generateInstallment(loan);
     }
 
     public void rejectLoan(long id) {
         Loan loan = this.loanRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce crédit n'existe pas")
         );
+
+        if (loan.getLoanStatus() == LoanStatus.DRAFT) {
+            throw new ValidationException("Impossible de traiter ce crédit");
+        }
 
         Set<LoanStatus> statuses = EnumSet.of(
                 LoanStatus.APPROVED,

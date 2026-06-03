@@ -1,6 +1,7 @@
 package com.jiyuu.banking.controller;
 
 import com.jiyuu.banking.dto.*;
+import com.jiyuu.banking.service.LoanInstallmentService;
 import com.jiyuu.banking.service.LoanService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,7 @@ import java.time.Instant;
 @AllArgsConstructor
 public class LoanController {
     private final LoanService loanService;
+    private final LoanInstallmentService installmentService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<LoanBaseResponse>> createLoan(@Valid @RequestBody LoanRequest request) {
@@ -81,8 +83,11 @@ public class LoanController {
     }
 
     @PatchMapping("/{idLoan}/approve")
-    public ResponseEntity<ApiResponse<?>> approve(@PathVariable(name = "idLoan") long id) {
-        this.loanService.approveLoan(id);
+    public ResponseEntity<ApiResponse<?>> approve(
+            @PathVariable(name = "idLoan") long id,
+            @Valid @RequestBody ApproveLoanRequest request
+    ) {
+        this.loanService.approveLoan(id, request);
 
         ApiResponse<?> response = new ApiResponse<>(
                 null,
@@ -101,6 +106,26 @@ public class LoanController {
         ApiResponse<?> response = new ApiResponse<>(
                 null,
                 "Le crédit a été rejeté.",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{idLoan}/schedule")
+    public ResponseEntity<ApiResponse<PagedResponse<InstallmentResponse>>> scheduleInstallment(
+            @PathVariable("idLoan") long id,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "installmentNumber") String sort,
+            @RequestParam(name = "direction", defaultValue = "asc") String direction
+    ) {
+        PagedResponse<InstallmentResponse> installments = this.installmentService.scheduleInstallment(id, page, size, sort, direction);
+
+        ApiResponse<PagedResponse<InstallmentResponse>> response = new ApiResponse<>(
+                installments,
+                "Les crédits ont bien été récupérés",
                 HttpStatus.OK.value(),
                 Instant.now()
         );

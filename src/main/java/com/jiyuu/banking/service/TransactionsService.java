@@ -39,12 +39,12 @@ public class TransactionsService {
         Account target = null;
 
         if (request.target() != null) {
-            target = accountRepository.findById(request.target())
+            target = accountRepository.findBynumeroAccount(request.target())
                     .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
         }
 
         if (request.source() != null) {
-            source = accountRepository.findById(request.source())
+            source = accountRepository.findBynumeroAccount(request.source())
                     .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
         }
 
