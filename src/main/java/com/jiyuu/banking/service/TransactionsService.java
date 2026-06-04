@@ -34,7 +34,7 @@ public class TransactionsService {
     private final AccountMembershipRepository accountMembershipRepository;
     private final ProcessTransactionService processTransactionService;
 
-    public TransactionResponse createTransaction(TransactionRequest request) {
+    public TransactionResponse createTransaction(TransactionRequest request, Long idInstallment) {
         Account source = null;
         Account target = null;
 
@@ -62,7 +62,7 @@ public class TransactionsService {
         long txId = tx.getIdTransaction();
 
         try {
-            this.processTransactionService.process(request);
+            this.processTransactionService.process(request, idInstallment);
             transactionsRepository.updateStatus(txId, TransactionStatus.COMPLETED);
         } catch (Exception e) {
             transactionsRepository.updateStatus(txId, TransactionStatus.FAILED);

@@ -5,6 +5,8 @@ import com.jiyuu.banking.dto.PagedResponse;
 import com.jiyuu.banking.entity.Loan;
 import com.jiyuu.banking.entity.LoanInstallment;
 import com.jiyuu.banking.enums.InstallmentStatus;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
+import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.LoanInstallmentRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +14,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -80,5 +84,17 @@ public class LoanInstallmentService {
                 .map(InstallmentResponse::of);
 
         return PagedResponse.of(installments);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markInstallmentAsOverdue(long idInstallment) {
+        LoanInstallment installment = this.installmentRepository.findById(idInstallment)
+                .orElseThrow(() -> new ResourceNotFoundException("Le crédit n'existe pas"));
+
+        if (installment.getInstallmentStatus() != InstallmentStatus.PENDING) {
+            throw new ValidationException("Le crédit a été traité");
+        }
+
+        installment.setInstallmentStatus(InstallmentStatus.OVERDUE);
     }
 }

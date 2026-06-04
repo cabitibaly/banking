@@ -157,7 +157,7 @@ public class LoanService {
                 .target(loan.getAccount().getNumeroAccount())
                 .build();
 
-        this.transactionsService.createTransaction(transactionRequest);
+        this.transactionsService.createTransaction(transactionRequest, null);
 
         loan.setLoanStatus(LoanStatus.APPROVED);
         loan.setRemainingAmount(loan.getAmount());

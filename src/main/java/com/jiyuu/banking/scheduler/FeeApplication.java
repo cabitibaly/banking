@@ -22,7 +22,6 @@ public class FeeApplication {
     private final AccountRepository accountRepository;
 
     @Scheduled(cron = "0 0 0 * * *")
-    @Transactional
     public void feeApplication() {
         log.info("Application des frais");
         List<Account> accounts = this.accountRepository.findAll();
@@ -40,7 +39,7 @@ public class FeeApplication {
                     .source(account.getNumeroAccount())
                     .build();
 
-            this.transactionsService.createTransaction(request);
+            this.transactionsService.createTransaction(request, null);
         }
 
         log.info("Terminé");
