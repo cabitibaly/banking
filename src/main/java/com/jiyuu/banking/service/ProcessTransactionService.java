@@ -39,58 +39,39 @@ public class ProcessTransactionService {
     }
 
     private void deposit(TransactionRequest request) {
-        Account target = this.accountRepository.findBynumeroAccount(request.target())
-                .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
+        Account target = this.getAccount(request.target());
 
         if (target.getAccountStatus() != AccountStatus.ACTIVE) {
             throw  new ValidationException("Le compte n'est pas actif");
         }
 
-        target.setSoldeAccount(target.getSoldeAccount().add(request.amount()));
+        this.creditAccount(target, request.amount());
     }
 
     private void withdrawAndRepayment(TransactionRequest request) {
-        Account source = this.accountRepository.findBynumeroAccount(request.source())
-                .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
+        Account source = this.getAccount(request.source());
 
         if (source.getAccountStatus() != AccountStatus.ACTIVE) {
             throw new ValidationException("Le compte n'est pas actif");
         }
 
-        BigDecimal finalSolde = source.getSoldeAccount().subtract(request.amount());
-        BigDecimal limitDecouvert = source.getDecouvert().negate();
-
-        if (finalSolde.compareTo(limitDecouvert) < 0) {
-            throw new ValidationException("Impossible de retirer le montant demandé car le solde dépassera la limite de découvert autorisée");
-        }
-
-        source.setSoldeAccount(source.getSoldeAccount().subtract(request.amount()));
+        this.debitAccount(source, request.amount());
     }
 
     private void transfer(TransactionRequest request) {
-        Account source = this.accountRepository.findBynumeroAccount(request.source())
-                .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
-
-        Account target = this.accountRepository.findBynumeroAccount(request.target())
-                .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
+        Account source = this.getAccount(request.source());
+        Account target = this.getAccount(request.target());
 
         if ((source.getAccountStatus() != AccountStatus.ACTIVE) || (target.getAccountStatus() != AccountStatus.ACTIVE)) {
             throw new ValidationException("Verifiez que les comptes sont actifs");
         }
 
-        BigDecimal finalSolde = source.getSoldeAccount().subtract(request.amount());
-        BigDecimal limitDecouvert = source.getDecouvert().negate();
-        if (finalSolde.compareTo(limitDecouvert) < 0) {
-            throw new ValidationException("Impossible de transférer le montant demandé car le solde dépassera la limite de découvert autorisée");
-        }
-
-        source.setSoldeAccount(source.getSoldeAccount().subtract(request.amount()));
-        target.setSoldeAccount(target.getSoldeAccount().add(request.amount()));
+        this.debitAccount(source, request.amount());
+        this.creditAccount(target, request.amount());
     }
 
     private void fee(TransactionRequest request) {
-        Account source = this.accountRepository.findBynumeroAccount(request.source())
-                .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
+        Account source = this.getAccount(request.source());
 
         if (source.getAccountStatus() == AccountStatus.CLOSED) {
             throw new ValidationException("Le compte est clôturé");
@@ -100,29 +81,36 @@ public class ProcessTransactionService {
             throw new ValidationException("Le compte est suspendu: frais interdits");
         }
 
-        BigDecimal finalSolde = source.getSoldeAccount().subtract(request.amount());
-        BigDecimal limitDecouvert = source.getDecouvert().negate();
-        if (finalSolde.compareTo(limitDecouvert) < 0) {
-            throw new ValidationException("Impossible d'effectuer l'opération car le solde dépassera la limite de découvert autorisée");
-        }
-
-        source.setSoldeAccount(source.getSoldeAccount().subtract(request.amount()));
+        this.debitAccount(source, request.amount());
     }
 
     private void interest(TransactionRequest request) {
-        Account source = this.accountRepository.findBynumeroAccount(request.source())
-                .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
+        Account source = this.getAccount(request.source());
 
         if (source.getAccountStatus() == AccountStatus.CLOSED) {
             throw new ValidationException("Le compte est clôturé");
         }
 
-        BigDecimal finalSolde = source.getSoldeAccount().subtract(request.amount());
+        this.debitAccount(source, request.amount());
+    }
+
+    private Account getAccount(String numeroAccount) {
+        return this.accountRepository.findBynumeroAccount(numeroAccount)
+                .orElseThrow(() -> new ResourceNotFoundException("Impossible de trouver le compte"));
+    }
+
+    private void debitAccount(Account source, BigDecimal amount) {
+        BigDecimal finalSolde = source.getSoldeAccount().subtract(amount);
         BigDecimal limitDecouvert = source.getDecouvert().negate();
+
         if (finalSolde.compareTo(limitDecouvert) < 0) {
-            throw new InsufficientFundsException("Solde insuffisant pour effectuer l'opération");
+            throw new ValidationException("Solde insuffisant");
         }
 
         source.setSoldeAccount(finalSolde);
+    }
+
+    private void creditAccount(Account target, BigDecimal amount) {
+        target.setSoldeAccount(target.getSoldeAccount().add(amount));
     }
 }
