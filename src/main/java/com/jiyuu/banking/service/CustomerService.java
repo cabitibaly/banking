@@ -136,23 +136,23 @@ public class CustomerService {
     }
 
     @Auditable(action = "CREATE", entity = "KycDocument")
-    public void addKycDocument(long idCustomer, KycDocumentRequest kycDocumentRequest) {
+    public void addKycDocument(long idCustomer, DocumentRequest documentRequest) {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
 
         customer.getKycDocuments().forEach(kycDocument -> {
-            if (kycDocument.getKycType().toString().equals(kycDocumentRequest.kycType())) {
+            if (kycDocument.getKycType().toString().equals(documentRequest.kycType())) {
                 throw new ValidationException(
-                        String.format("Le document KYC de type %s a déjà été ajouté", kycDocumentRequest.kycType())
+                        String.format("Le document KYC de type %s a déjà été ajouté", documentRequest.kycType())
                 );
             }
         });
 
         KycDocument kycDocument = new KycDocument();
         kycDocument.setCustomer(customer);
-        kycDocument.setFileUrl(kycDocumentRequest.fileUrl());
+        kycDocument.setFileUrl(documentRequest.fileUrl());
         kycDocument.setKycStatus(KycStatus.PENDING);
-        kycDocument.setKycType(KycType.valueOf(kycDocumentRequest.kycType()));
+        kycDocument.setKycType(KycType.valueOf(documentRequest.kycType()));
 
         this.kycDocumentRepository.save(kycDocument);
     }

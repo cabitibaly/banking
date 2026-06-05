@@ -20,6 +20,7 @@ import com.jiyuu.banking.repository.specification.AccountSpecification;
 import com.jiyuu.banking.repository.specification.TransactionsSpecification;
 import com.jiyuu.banking.utils.AccountNumberGenerator;
 import jakarta.mail.MessagingException;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,15 +39,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 public class AccountService {
     private final AccountRepository accountRepository;
     private final AccountMembershipRepository accountMembershipRepository;
     private final TransactionsRepository transactionsRepository;
     private final CustomerRepository customerRepository;
-    private final TransactionsService transactionsService;
     private final SpringTemplateEngine springTemplateEngine;
     private final NotificationSender notificationSender;
+    private final TransactionsService transactionsService;
 
     @Value("${max-decouvert}")
     private long MAX_DECOUVERT;
@@ -225,6 +227,32 @@ public class AccountService {
         renderer.createPDF(stream);
         byte[] pdf = stream.toByteArray();
         this.notificationSender.sendTransactionReport("test@example.com", pdf);
+    }
+
+    public void collectFee() {
+        log.info("Application des frais");
+        List<Account> accounts = this.accountRepository.findAll();
+
+        for (Account account : accounts) {
+            try {
+                if (account.getAccountStatus() == AccountStatus.CLOSED) {
+                    continue;
+                }
+
+                TransactionRequest request = TransactionRequest.builder()
+                        .amount(BigDecimal.valueOf(500))
+                        .currency("XOF")
+                        .type("FEE")
+                        .source(account.getNumeroAccount())
+                        .build();
+
+                this.transactionsService.createTransaction(request);
+            } catch (Exception e) {
+                log.error("Erreur application des frais {} : {}", account.getNumeroAccount(), e.getMessage());
+            }
+        }
+
+        log.info("Terminé");
     }
 
 }

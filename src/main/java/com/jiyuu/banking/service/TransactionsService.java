@@ -5,6 +5,7 @@ import com.jiyuu.banking.dto.TransactionRequest;
 import com.jiyuu.banking.dto.TransactionResponse;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.AccountMembership;
+import com.jiyuu.banking.entity.LoanInstallment;
 import com.jiyuu.banking.entity.Transactions;
 import com.jiyuu.banking.enums.Currency;
 import com.jiyuu.banking.enums.TransactionStatus;
@@ -13,6 +14,7 @@ import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.AccountMembershipRepository;
 import com.jiyuu.banking.repository.AccountRepository;
+import com.jiyuu.banking.repository.LoanInstallmentRepository;
 import com.jiyuu.banking.repository.TransactionsRepository;
 
 import lombok.AllArgsConstructor;
@@ -34,17 +36,17 @@ public class TransactionsService {
     private final AccountMembershipRepository accountMembershipRepository;
     private final ProcessTransactionService processTransactionService;
 
-    public TransactionResponse createTransaction(TransactionRequest request) {
+    public Transactions createTransactionEntity(TransactionRequest request) {
         Account source = null;
         Account target = null;
 
         if (request.target() != null) {
-            target = accountRepository.findById(request.target())
+            target = accountRepository.findBynumeroAccount(request.target())
                     .orElseThrow(() -> new ResourceNotFoundException("Le compte de destination n'existe pas"));
         }
 
         if (request.source() != null) {
-            source = accountRepository.findById(request.source())
+            source = accountRepository.findBynumeroAccount(request.source())
                     .orElseThrow(() -> new ResourceNotFoundException("Le compte de source n'existe pas"));
         }
 
@@ -69,7 +71,11 @@ public class TransactionsService {
             throw e;
         }
 
-        return toResponse(transactionsRepository.findById(txId).orElseThrow());
+        return transactionsRepository.findById(txId).orElseThrow();
+    }
+
+    public TransactionResponse createTransaction(TransactionRequest request) {
+        return toResponse(createTransactionEntity(request));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

@@ -19,7 +19,7 @@ public record TransactionRequest(
         @NotBlank(message = "La monnaie est obligatoire")
         String currency,
 
-        Long source,
-        Long target
+        String source,
+        String target
 ) {
 }
