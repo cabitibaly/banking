@@ -4,11 +4,16 @@ import com.jiyuu.banking.dto.InstallmentResponse;
 import com.jiyuu.banking.dto.PagedResponse;
 import com.jiyuu.banking.entity.Loan;
 import com.jiyuu.banking.entity.LoanInstallment;
+import com.jiyuu.banking.entity.Transactions;
 import com.jiyuu.banking.enums.InstallmentStatus;
+import com.jiyuu.banking.enums.LoanStatus;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.LoanInstallmentRepository;
+import com.jiyuu.banking.repository.LoanRepository;
+import com.jiyuu.banking.repository.TransactionsRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,9 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class LoanInstallmentService {
@@ -72,6 +79,11 @@ public class LoanInstallmentService {
         this.installmentRepository.saveAll(installments);
     }
 
+    public List<LoanInstallment> PendingInstallment() {
+        return this.installmentRepository
+                .findByDueDateAndInstallmentStatus(LocalDate.now(), InstallmentStatus.PENDING);
+    }
+
     public PagedResponse<InstallmentResponse> scheduleInstallment(long idLoan, int page, int size, String sort, String direction) {
         Sort sortBy = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sort).descending()
@@ -96,5 +108,16 @@ public class LoanInstallmentService {
         }
 
         installment.setInstallmentStatus(InstallmentStatus.OVERDUE);
+    }
+
+    public void repayment(Loan loan, Transactions transactions) {
+
+        List<LoanInstallment> installments = this.installmentRepository
+                .findByLoanOverdueOrPaid(loan);
+
+        installments.forEach(installment -> {
+            installment.setInstallmentStatus(InstallmentStatus.PAID);
+            installment.setTransaction(transactions);
+        });
     }
 }

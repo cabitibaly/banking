@@ -1,17 +1,15 @@
 package com.jiyuu.banking.scheduler;
 
-import com.jiyuu.banking.dto.TransactionRequest;
 import com.jiyuu.banking.entity.LoanInstallment;
 import com.jiyuu.banking.enums.InstallmentStatus;
 import com.jiyuu.banking.repository.LoanInstallmentRepository;
-import com.jiyuu.banking.service.TransactionsService;
+import com.jiyuu.banking.service.LoanService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,26 +17,13 @@ import java.util.List;
 @Component
 @AllArgsConstructor
 public class ProcessMonthlyInstallment {
-    private final TransactionsService transactionsService;
-    private final LoanInstallmentRepository installmentRepository;
+    private final LoanService loanService;
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
     public void collectMonthlyDue() {
         log.info("Début du prélèvement de mensualité");
-        List<LoanInstallment> installments = this.installmentRepository
-                .findByDueDateAndInstallmentStatus(LocalDate.now(), InstallmentStatus.PENDING);
-
-        for (LoanInstallment installment : installments) {
-            TransactionRequest request = TransactionRequest.builder()
-                    .amount(installment.getTotalAmount())
-                    .currency("XOF")
-                    .type("INTEREST")
-                    .source(installment.getLoan().getAccount().getNumeroAccount())
-                    .build();
-
-            this.transactionsService.createTransaction(request, installment.getIdInstallment());
-        }
-
+        this.loanService.processMonthlyInstallment();
         log.info("Fin du prélèvement de mensualité");
     }
 }

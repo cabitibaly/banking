@@ -43,7 +43,7 @@ public class LoanInstallment extends BaseEntity{
     @JoinColumn(name = "id_loan", nullable = false)
     private Loan loan;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_transaction")
     private Transactions transaction;
 }

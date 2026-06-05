@@ -132,4 +132,18 @@ public class LoanController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @PostMapping("/{idLoan}/repay")
+    public ResponseEntity<ApiResponse<?>> repay(@PathVariable(name = "idLoan") long id) {
+        this.loanService.earlyRepayment(id);
+
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "Remboursement anticipé effectué.",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

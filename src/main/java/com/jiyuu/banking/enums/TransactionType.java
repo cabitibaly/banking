@@ -6,5 +6,6 @@ public enum TransactionType {
     TRANSFER,
     INTEREST,
     FEE,
-    REVERSAL
+    REVERSAL,
+    REPAYMENT
 }

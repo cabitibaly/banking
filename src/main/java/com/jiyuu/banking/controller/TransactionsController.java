@@ -21,7 +21,7 @@ public class TransactionsController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<?>> deposit(@Valid @RequestBody TransactionRequest request) {
-        TransactionResponse transactionResponse = this.transactionsService.createTransaction(request, null);
+        TransactionResponse transactionResponse = this.transactionsService.createTransaction(request);
 
         ApiResponse<TransactionResponse> response = new ApiResponse<>(
                 transactionResponse,

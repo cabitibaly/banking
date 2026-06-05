@@ -1,11 +1,9 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.dto.*;
-import com.jiyuu.banking.entity.Account;
-import com.jiyuu.banking.entity.Customer;
-import com.jiyuu.banking.entity.Loan;
-import com.jiyuu.banking.entity.LoanDocument;
+import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.DocumentType;
+import com.jiyuu.banking.enums.InstallmentStatus;
 import com.jiyuu.banking.enums.LoanStatus;
 import com.jiyuu.banking.enums.LoanType;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
@@ -15,6 +13,7 @@ import com.jiyuu.banking.repository.CustomerRepository;
 import com.jiyuu.banking.repository.LoanDocumentRepository;
 import com.jiyuu.banking.repository.LoanRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,8 +23,10 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class LoanService {
@@ -157,7 +158,7 @@ public class LoanService {
                 .target(loan.getAccount().getNumeroAccount())
                 .build();
 
-        this.transactionsService.createTransaction(transactionRequest, null);
+        this.transactionsService.createTransaction(transactionRequest);
 
         loan.setLoanStatus(LoanStatus.APPROVED);
         loan.setRemainingAmount(loan.getAmount());
@@ -191,5 +192,89 @@ public class LoanService {
 
         loan.setLoanStatus(LoanStatus.REJECTED);
         this.loanRepository.save(loan);
+    }
+
+    public void earlyRepayment(long id) {
+        Loan loan = this.loanRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce crédit n'existe pas"));
+
+        if (loan.getLoanStatus() == LoanStatus.DRAFT) {
+            throw new ValidationException("Impossible de traiter ce crédit");
+        }
+
+        Set<LoanStatus> statuses = EnumSet.of(
+                LoanStatus.REJECTED,
+                LoanStatus.CLOSED,
+                LoanStatus.UNDER_REVIEW
+        );
+
+        if(statuses.contains(loan.getLoanStatus())) {
+            throw new ValidationException("Ce crédit a dejà été traité ou est en cours de traitement.");
+        }
+
+        BigDecimal remainingAmount = loan.getRemainingAmount();
+        if (remainingAmount.compareTo(BigDecimal.ZERO) == 0 && loan.getLoanStatus() == LoanStatus.CLOSED) {
+            throw new ValidationException("Ce crédit a déjà été payé");
+        }
+
+        TransactionRequest request = TransactionRequest.builder()
+                .amount(remainingAmount)
+                .currency("XOF")
+                .type("REPAYMENT")
+                .source(loan.getAccount().getNumeroAccount())
+                .build();
+
+        Transactions transactions = this.transactionsService.createTransactionEntity(request);
+        this.installmentService.repayment(loan, transactions);
+
+        loan.setRemainingAmount(BigDecimal.ZERO);
+        loan.setLoanStatus(LoanStatus.CLOSED);
+        this.loanRepository.save(loan);
+    }
+
+    public void processMonthlyInstallment() {
+        List<LoanInstallment> installments = this.installmentService.PendingInstallment();
+
+        for (LoanInstallment installment : installments) {
+            try {
+                this.collectInstallment(installment);
+            } catch (Exception e) {
+                log.error("Erreur mensualité {} : {}", installment.getIdInstallment(), e.getMessage());
+            }
+        }
+    }
+
+    public void collectInstallment(LoanInstallment installment) {
+        try {
+            TransactionRequest request = TransactionRequest.builder()
+                    .amount(installment.getTotalAmount())
+                    .currency("XOF")
+                    .type("INTEREST")
+                    .source(installment.getLoan().getAccount().getNumeroAccount())
+                    .build();
+
+            Transactions tx = transactionsService.createTransactionEntity(request);
+            installment.setTransaction(tx);
+
+            installment.setInstallmentStatus(InstallmentStatus.PAID);
+            Loan loan = installment.getLoan();
+
+            BigDecimal newRemaining = loan.getRemainingAmount()
+                    .subtract(installment.getTotalAmount())
+                    .max(BigDecimal.ZERO);
+
+            loan.setRemainingAmount(newRemaining);
+
+            boolean allPaid = loan.getInstallments()
+                    .stream()
+                    .allMatch(i -> i.getInstallmentStatus() == InstallmentStatus.PAID);
+
+            if (allPaid) {
+                loan.setLoanStatus(LoanStatus.CLOSED);
+            }
+        } catch (Exception e) {
+            this.installmentService.markInstallmentAsOverdue(installment.getIdInstallment());
+            throw e;
+        }
     }
 }

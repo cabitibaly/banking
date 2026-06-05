@@ -53,6 +53,9 @@ public class Loan extends BaseEntity{
     @OneToMany(mappedBy = "loan", fetch = FetchType.LAZY)
     private List<LoanDocument> documents = new ArrayList<>();
 
+    @OneToMany(mappedBy = "loan", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<LoanInstallment> installments = new ArrayList<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_customer")
     private Customer customer;

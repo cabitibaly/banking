@@ -1,5 +1,6 @@
 package com.jiyuu.banking.repository;
 
+import com.jiyuu.banking.entity.Loan;
 import com.jiyuu.banking.entity.LoanInstallment;
 import com.jiyuu.banking.enums.InstallmentStatus;
 import io.lettuce.core.dynamic.annotation.Param;
@@ -28,4 +29,11 @@ public interface LoanInstallmentRepository extends JpaRepository<LoanInstallment
             @Param("dueDate") LocalDate dueDate,
             @Param("status") InstallmentStatus status
     );
+
+    @Query("""
+        SELECT i FROM LoanInstallment i        
+        WHERE i.installmentStatus = "OVERDUE" OR i.installmentStatus = "PENDING"
+        AND i.loan = :loan
+    """)
+    List<LoanInstallment> findByLoanOverdueOrPaid(@Param("loan")Loan loan);
 }
