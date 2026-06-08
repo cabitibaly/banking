@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -113,6 +114,12 @@ public class ApplicationControllerAdvice {
                         FieldError::getField,
                         FieldError::getDefaultMessage
                 ));
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(value = MethodArgumentTypeMismatchException.class)
+    public ProblemDetail methodArgumentTypeMismatchException(final MethodArgumentTypeMismatchException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Le format de votre champ est invalide");
     }
 
     @ResponseStatus(UNAUTHORIZED)
