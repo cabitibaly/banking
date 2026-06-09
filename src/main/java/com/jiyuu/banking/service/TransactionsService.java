@@ -3,10 +3,7 @@ package com.jiyuu.banking.service;
 import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.TransactionRequest;
 import com.jiyuu.banking.dto.TransactionResponse;
-import com.jiyuu.banking.entity.Account;
-import com.jiyuu.banking.entity.AccountMembership;
-import com.jiyuu.banking.entity.LoanInstallment;
-import com.jiyuu.banking.entity.Transactions;
+import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.Currency;
 import com.jiyuu.banking.enums.TransactionStatus;
 import com.jiyuu.banking.enums.TransactionType;
@@ -36,7 +33,7 @@ public class TransactionsService {
     private final AccountMembershipRepository accountMembershipRepository;
     private final ProcessTransactionService processTransactionService;
 
-    public Transactions createTransactionEntity(TransactionRequest request) {
+    public Transactions createTransactionEntity(TransactionRequest request, Card card) {
         Account source = null;
         Account target = null;
 
@@ -58,6 +55,7 @@ public class TransactionsService {
                 .transactionStatus(TransactionStatus.PENDING)
                 .sourceAccount(source)
                 .targetAccount(target)
+                .card(card)
                 .build();
 
         tx = transactionsRepository.save(tx);
@@ -74,8 +72,8 @@ public class TransactionsService {
         return transactionsRepository.findById(txId).orElseThrow();
     }
 
-    public TransactionResponse createTransaction(TransactionRequest request) {
-        return toResponse(createTransactionEntity(request));
+    public TransactionResponse createTransaction(TransactionRequest request, Card card) {
+        return toResponse(createTransactionEntity(request, card));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

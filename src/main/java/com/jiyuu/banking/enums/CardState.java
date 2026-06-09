@@ -13,7 +13,7 @@ public enum CardState {
     private Set<CardState> allowedTransitions;
 
     static {
-        PENDING.allowedTransitions = Set.of(ACTIVE);
+        PENDING.allowedTransitions = Set.of();
         ACTIVE.allowedTransitions = Set.of(BLOCKED, EXPIRED, CANCELED);
         BLOCKED.allowedTransitions = Set.of(ACTIVE, EXPIRED, CANCELED);
         EXPIRED.allowedTransitions = Set.of();

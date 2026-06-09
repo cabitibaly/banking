@@ -30,10 +30,18 @@ public class TransactionsSpecification {
         };
     }
 
-    public static Specification<Transactions> withFiler(Long idAccount, LocalDateTime startDate, LocalDateTime endDate) {
+    public static Specification<Transactions> hasCardNumber(String cardNumber) {
+        return (root, query, cb) -> {
+            if (cardNumber == null) return cb.conjunction();
+            return cb.equal(root.get("card").get("cardNumber"), cardNumber);
+        };
+    }
+
+    public static Specification<Transactions> withFiler(Long idAccount, LocalDateTime startDate, LocalDateTime endDate, String cardNumber) {
         return Specification
                 .where(hasAccount(idAccount))
                 .and(hasStartDate(startDate))
-                .and(hasEndDate(endDate));
+                .and(hasEndDate(endDate))
+                .and(hasCardNumber(cardNumber));
     }
 }

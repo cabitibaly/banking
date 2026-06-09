@@ -7,6 +7,7 @@ import com.jiyuu.banking.entity.Card;
 import com.jiyuu.banking.enums.CardState;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
+import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.CardRepository;
 import com.jiyuu.banking.utils.CardNumberGenerator;
 import lombok.AllArgsConstructor;
@@ -20,12 +21,13 @@ import java.util.Random;
 @AllArgsConstructor
 public class CardService {
     private final CardRepository cardRepository;
-    private final AccountService accountService;
+    private final AccountRepository accountRepository;
     private BCryptPasswordEncoder passwordEncoder;
     private Random random = new Random();
 
     public CardResponse createCard(CardRequest request) {
-        Account account = this.accountService.getAccountByNumber(request.accountNumber());
+        Account account = this.accountRepository.findBynumeroAccount(request.accountNumber())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         String cvv = String.format("%03d", random.nextInt(1000));
         String cvvHash = this.passwordEncoder.encode(cvv);
@@ -71,5 +73,28 @@ public class CardService {
 
         card.setState(state);
         this.cardRepository.save(card);
+    }
+
+    public Card validCard(String cardNumber, String pin, String cvv, LocalDate expirationDate) {
+        Card card = this.cardRepository.findByCardNumber(cardNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Card not found"));
+
+        if (card.getState() != CardState.ACTIVE) {
+            throw new ValidationException("Transaction non autorisée");
+        }
+
+        if (!expirationDate.isEqual(card.getExpireAt())) {
+            throw new ValidationException("Transaction non autorisée");
+        }
+
+        if (!passwordEncoder.matches(cvv, card.getCvv())) {
+            throw new ValidationException("Transaction non autorisée");
+        }
+
+        if (!passwordEncoder.matches(pin, card.getPin())) {
+            throw new ValidationException("Transaction non autorisée");
+        }
+
+        return card;
     }
 }

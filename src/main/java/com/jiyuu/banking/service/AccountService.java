@@ -2,10 +2,7 @@ package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.*;
-import com.jiyuu.banking.entity.Account;
-import com.jiyuu.banking.entity.AccountMembership;
-import com.jiyuu.banking.entity.Customer;
-import com.jiyuu.banking.entity.Transactions;
+import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.AccountStatus;
 import com.jiyuu.banking.enums.AccountType;
 import com.jiyuu.banking.enums.Currency;
@@ -49,6 +46,7 @@ public class AccountService {
     private final SpringTemplateEngine springTemplateEngine;
     private final NotificationSender notificationSender;
     private final TransactionsService transactionsService;
+    private final CardService cardService;
 
     @Value("${max-decouvert}")
     private long MAX_DECOUVERT;
@@ -60,7 +58,8 @@ public class AccountService {
             CustomerRepository customerRepository,
             TransactionsService transactionsService,
             SpringTemplateEngine springTemplateEngine,
-            NotificationSender notificationSender
+            NotificationSender notificationSender,
+            CardService cardService
     ) {
         this.accountRepository = accountRepository;
         this.accountMembershipRepository = accountMembershipRepository;
@@ -69,6 +68,7 @@ public class AccountService {
         this.transactionsService = transactionsService;
         this.springTemplateEngine = springTemplateEngine;
         this.notificationSender = notificationSender;
+        this.cardService = cardService;
     }
 
 //    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
@@ -172,7 +172,6 @@ public class AccountService {
         return AccountResponse.of(account);
     }
 
-    @Auditable(action = "READ", entity = "ACCOUNT")
     public Account getAccountByNumber(String number) {
         return this.accountRepository.findBynumeroAccount(number)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
@@ -183,6 +182,7 @@ public class AccountService {
             Long idAccount,
             String start,
             String end,
+            String cardNumber,
             int page,
             int size,
             String sortBy,
@@ -190,7 +190,7 @@ public class AccountService {
     ) {
         LocalDateTime startDate = start == null || start.isEmpty()  ? null : LocalDateTime.parse(start);
         LocalDateTime endDate =  end == null || end.isEmpty() ? null : LocalDateTime.parse(end);
-        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate);
+        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate, cardNumber);
 
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
@@ -208,7 +208,7 @@ public class AccountService {
     public void statement(long idAccount, String start, String end) throws MessagingException {
         LocalDateTime startDate = start == null || start.isEmpty()  ? null : LocalDateTime.parse(start);
         LocalDateTime endDate =  end == null || end.isEmpty() ? null : LocalDateTime.parse(end);
-        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate);
+        Specification<Transactions> spec = TransactionsSpecification.withFiler(idAccount, startDate, endDate, null);
 
         List<TransactionResponse> transactions = this.transactionsRepository
                 .findAll(spec)
@@ -252,7 +252,7 @@ public class AccountService {
                         .source(account.getNumeroAccount())
                         .build();
 
-                this.transactionsService.createTransaction(request);
+                this.transactionsService.createTransaction(request, null);
             } catch (Exception e) {
                 log.error("Erreur application des frais {} : {}", account.getNumeroAccount(), e.getMessage());
             }
@@ -261,4 +261,22 @@ public class AccountService {
         log.info("Terminé");
     }
 
+    public TransactionResponse debitAccountWithCard(DebitRequest request) {
+        Card card = this.cardService
+                .validCard(
+                        request.cardNumber(),
+                        request.pin(),
+                        request.cvv(),
+                        request.expirationDate()
+                );
+
+        TransactionRequest transactionRequest = TransactionRequest.builder()
+                .amount(request.amount())
+                .currency(request.currency())
+                .type("WITHDRAW")
+                .source(card.getAccount().getNumeroAccount())
+                .build();
+
+        return this.transactionsService.createTransaction(transactionRequest, card);
+    }
 }

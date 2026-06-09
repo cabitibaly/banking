@@ -158,7 +158,7 @@ public class LoanService {
                 .target(loan.getAccount().getNumeroAccount())
                 .build();
 
-        this.transactionsService.createTransaction(transactionRequest);
+        this.transactionsService.createTransaction(transactionRequest, null);
 
         loan.setLoanStatus(LoanStatus.APPROVED);
         loan.setRemainingAmount(loan.getAmount());
@@ -224,7 +224,7 @@ public class LoanService {
                 .source(loan.getAccount().getNumeroAccount())
                 .build();
 
-        Transactions transactions = this.transactionsService.createTransactionEntity(request);
+        Transactions transactions = this.transactionsService.createTransactionEntity(request, null);
         this.installmentService.repayment(loan, transactions);
 
         loan.setRemainingAmount(BigDecimal.ZERO);
@@ -253,7 +253,7 @@ public class LoanService {
                     .source(installment.getLoan().getAccount().getNumeroAccount())
                     .build();
 
-            Transactions tx = transactionsService.createTransactionEntity(request);
+            Transactions tx = transactionsService.createTransactionEntity(request, null);
             installment.setTransaction(tx);
 
             installment.setInstallmentStatus(InstallmentStatus.PAID);

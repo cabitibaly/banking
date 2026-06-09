@@ -118,13 +118,14 @@ public class AccountController {
             @PathVariable long idAccount,
             @RequestParam(name = "start", required = false) String start,
             @RequestParam(name = "end", required = false) String end,
+            @RequestParam(name = "cardNumber", required = false) String cardNumber,
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @RequestParam(name = "size", required = false, defaultValue = "10") int size,
             @RequestParam(name = "sort", required = false, defaultValue = "idTransaction") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "asc") String direction
     ) {
         PagedResponse<TransactionResponse> transactions = this.accountService
-                .getMyTransactions(idAccount, start, end, page, size, sort, direction);
+                .getMyTransactions(idAccount, start, end, cardNumber, page, size, sort, direction);
 
         ApiResponse<PagedResponse<TransactionResponse>> response = new ApiResponse<>(
                 transactions,
@@ -147,6 +148,20 @@ public class AccountController {
         ApiResponse<Void> response = new ApiResponse<>(
                 null,
                 "La liste de toutes les transactions",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/debit")
+    public ResponseEntity<ApiResponse<?>> debitAccount(@Valid @RequestBody DebitRequest request) {
+        TransactionResponse transactionResponse = this.accountService.debitAccountWithCard(request);
+
+        ApiResponse<?> response = new ApiResponse<>(
+                transactionResponse,
+                "La transaction a bien été effectuée",
                 HttpStatus.OK.value(),
                 Instant.now()
         );
