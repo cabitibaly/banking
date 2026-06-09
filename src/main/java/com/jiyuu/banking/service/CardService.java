@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -96,5 +97,16 @@ public class CardService {
         }
 
         return card;
+    }
+
+    public void markCardsAsExpired() {
+        List<Card> cards = this.cardRepository
+                .findByExpireAtBeforeAndStateNotIn(
+                        LocalDate.now(),
+                        List.of(CardState.EXPIRED, CardState.CANCELED)
+                );
+
+        cards.forEach(card -> card.setState(CardState.EXPIRED));
+        this.cardRepository.saveAll(cards);
     }
 }

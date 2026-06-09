@@ -172,11 +172,6 @@ public class AccountService {
         return AccountResponse.of(account);
     }
 
-    public Account getAccountByNumber(String number) {
-        return this.accountRepository.findBynumeroAccount(number)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-    }
-
     @Auditable(action = "READ", entity = "TRANSACTION")
     public PagedResponse<TransactionResponse> getMyTransactions(
             Long idAccount,
