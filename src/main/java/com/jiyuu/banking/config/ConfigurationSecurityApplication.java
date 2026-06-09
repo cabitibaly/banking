@@ -18,6 +18,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.util.Random;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -66,6 +68,7 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.GET, "/accounts/{idAccount}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .requestMatchers(HttpMethod.GET, "/accounts/{idAccount}/statement").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .requestMatchers(HttpMethod.GET, "/accounts/{idAccount}/transactions").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
+                                        .requestMatchers(HttpMethod.POST, "/accounts/debit").hasAuthority("CUSTOMER_CREATE")
                                         .requestMatchers(HttpMethod.POST, "/transactions").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE", "CUSTOMER_CREATE")
                                         .requestMatchers(HttpMethod.GET, "/transactions/{ref}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .requestMatchers(HttpMethod.POST, "/transactions/{ref}/reverse").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE")
@@ -77,6 +80,9 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.PATCH, "/loans/reject").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .requestMatchers(HttpMethod.GET, "/loans/{idLoans}/schedule").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")
                                         .requestMatchers(HttpMethod.POST, "/loans/{idLoans}/repay").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE", "CUSTOMER_CREATE")
+                                        .requestMatchers(HttpMethod.POST, "/card").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE")
+                                        .requestMatchers(HttpMethod.PATCH, "/card/{cardNumber}").hasAuthority("CUSTOMER_UPDATE")
+                                        .requestMatchers(HttpMethod.PATCH, "/card/{cardNumber}/state").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .anyRequest().authenticated()
                 )
                 .sessionManagement(httpSecuritySessionManagementConfigurer ->
@@ -95,5 +101,10 @@ public class ConfigurationSecurityApplication {
         DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(userService);
         daoAuthenticationProvider.setPasswordEncoder(bCryptPasswordEncoder);
         return daoAuthenticationProvider;
+    }
+
+    @Bean
+    public Random random() {
+        return new Random();
     }
 }

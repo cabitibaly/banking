@@ -50,4 +50,8 @@ public class Transactions extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_id_account")
     private Account targetAccount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_card")
+    private Card card;
 }
