@@ -24,7 +24,8 @@ public class CardService {
     private final CardRepository cardRepository;
     private final AccountRepository accountRepository;
     private BCryptPasswordEncoder passwordEncoder;
-    private Random random = new Random();
+    private final CardNumberGenerator cardNumberGenerator;
+    private final Random random;
 
     public CardResponse createCard(CardRequest request) {
         Account account = this.accountRepository.findBynumeroAccount(request.accountNumber())
@@ -34,7 +35,7 @@ public class CardService {
         String cvvHash = this.passwordEncoder.encode(cvv);
 
         LocalDate expireAt = LocalDate.now().plusYears(3);
-        String carNumber = CardNumberGenerator.generate();
+        String carNumber = cardNumberGenerator.generate();
 
         Card card = Card.builder()
                 .cardNumber(carNumber)

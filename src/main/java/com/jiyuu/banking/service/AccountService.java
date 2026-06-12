@@ -46,6 +46,7 @@ public class AccountService {
     private final SpringTemplateEngine springTemplateEngine;
     private final NotificationSender notificationSender;
     private final TransactionsService transactionsService;
+    private final AccountNumberGenerator accountNumberGenerator;
     private final CardService cardService;
 
     @Value("${max-decouvert}")
@@ -59,6 +60,7 @@ public class AccountService {
             TransactionsService transactionsService,
             SpringTemplateEngine springTemplateEngine,
             NotificationSender notificationSender,
+            AccountNumberGenerator accountNumberGenerator,
             CardService cardService
     ) {
         this.accountRepository = accountRepository;
@@ -68,6 +70,7 @@ public class AccountService {
         this.transactionsService = transactionsService;
         this.springTemplateEngine = springTemplateEngine;
         this.notificationSender = notificationSender;
+        this.accountNumberGenerator = accountNumberGenerator;
         this.cardService = cardService;
     }
 
@@ -76,7 +79,7 @@ public class AccountService {
         Customer customer = this.customerRepository.findById(accountRequest.idCustomer())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-        String accountNumber = AccountNumberGenerator.generate();
+        String accountNumber = accountNumberGenerator.generate();
         Account account = Account.builder()
                 .accountType(AccountType.valueOf(accountRequest.type()))
                 .accountStatus(AccountStatus.PENDING)
