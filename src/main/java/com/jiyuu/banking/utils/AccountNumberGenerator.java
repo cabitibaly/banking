@@ -1,21 +1,23 @@
 package com.jiyuu.banking.utils;
 
 import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.Random;
 
+@Component
 @NoArgsConstructor
 public class AccountNumberGenerator {
     private static final String COUNTRY_CODE = "BF";
     private static final int BBAN_LENGTH = 23;
 
-    public static String generate() {
+    public String generate() {
         String bban = generateBBAN();
         int checkDigits = computeCheckDigits(COUNTRY_CODE, bban);
         return COUNTRY_CODE + String.format("%02d", checkDigits) + bban;
     }
 
-    private static String generateBBAN() {
+    private String generateBBAN() {
         Random random = new Random();
         StringBuilder sb = new StringBuilder(BBAN_LENGTH);
         for (int i = 0; i < BBAN_LENGTH; i++) {
@@ -24,7 +26,7 @@ public class AccountNumberGenerator {
         return sb.toString();
     }
 
-    private static int computeCheckDigits(String countryCode, String bban) {
+    private int computeCheckDigits(String countryCode, String bban) {
         String rearranged = bban + countryCode + "00";
 
         StringBuilder numeric = new StringBuilder();
@@ -40,7 +42,7 @@ public class AccountNumberGenerator {
         return 98 - remainder;
     }
 
-    private static int mod97(String numericString) {
+    private int mod97(String numericString) {
         int remainder = 0;
         for (char c : numericString.toCharArray()) {
             remainder = (remainder * 10 + (c - '0')) % 97;

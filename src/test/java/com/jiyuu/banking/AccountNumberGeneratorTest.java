@@ -1,34 +1,41 @@
 package com.jiyuu.banking;
 
 import com.jiyuu.banking.utils.AccountNumberGenerator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AccountNumberGeneratorTest {
+    private AccountNumberGenerator accountNumberGenerator;
+
+    @BeforeEach
+    void setUp() {
+        accountNumberGenerator = new AccountNumberGenerator();
+    }
 
     @Test
     public void shouldGenerateNumberWithBF() {
-        String number = AccountNumberGenerator.generate();
+        String number = accountNumberGenerator.generate();
         assertTrue(number.startsWith("BF"));
     }
 
     @Test
     public void shouldGenerateNumberWith27Chars() {
-        String number = AccountNumberGenerator.generate();
+        String number = accountNumberGenerator.generate();
         assertEquals(27, number.length());
     }
 
     @Test
     public void shouldGenerateHaveDigitsAferBF() {
-        String number = AccountNumberGenerator.generate();
+        String number = accountNumberGenerator.generate();
         assertTrue(number.substring(2).matches("\\d{25}"));
     }
 
     @Test
     public void shouldGenerateValidNumber() {
-        String number = AccountNumberGenerator.generate();
+        String number = accountNumberGenerator.generate();
 
         String rearranged = number.substring(4) + number.substring(0, 4);
 
