@@ -3,15 +3,12 @@ package com.jiyuu.banking.service;
 import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Customer;
-import com.jiyuu.banking.entity.KycDocument;
 import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.enums.KycStatus;
-import com.jiyuu.banking.enums.KycType;
 import com.jiyuu.banking.enums.StatusCustomer;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.CustomerRepository;
-import com.jiyuu.banking.repository.KycDocumentRepository;
 import com.jiyuu.banking.repository.specification.CustomerSpecification;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,7 +26,6 @@ import java.util.Optional;
 @AllArgsConstructor
 public class CustomerService {
     private final CustomerRepository customerRepository;
-    private final KycDocumentRepository kycDocumentRepository;
 
     @Auditable(action = "CREATE", entity = "CUSTOMER")
     public CustomerResponse createCustomer(User user, CustomerRequest customerRequest) {
@@ -138,52 +134,5 @@ public class CustomerService {
         );
 
         this.customerRepository.delete(customer);
-    }
-
-    @Auditable(action = "CREATE", entity = "KycDocument")
-    public void addKycDocument(long idCustomer, DocumentRequest documentRequest) {
-        Customer customer = this.customerRepository.findById(idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
-
-        customer.getKycDocuments().forEach(kycDocument -> {
-            if (kycDocument.getKycType().toString().equals(documentRequest.kycType())) {
-                throw new ValidationException(
-                        String.format("Le document KYC de type %s a déjà été ajouté", documentRequest.kycType())
-                );
-            }
-        });
-
-        KycDocument kycDocument = new KycDocument();
-        kycDocument.setCustomer(customer);
-        kycDocument.setFileUrl(documentRequest.fileUrl());
-        kycDocument.setKycStatus(KycStatus.PENDING);
-        kycDocument.setKycType(KycType.valueOf(documentRequest.kycType()));
-
-        this.kycDocumentRepository.save(kycDocument);
-    }
-
-    @Auditable(action = "UPDATE", entity = "KycDocument")
-    public void updateKycDocument(long idKycDocument, long idCustomer, String status) {
-        KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
-
-        if (kycDocument.getKycStatus() != KycStatus.PENDING && kycDocument.getKycStatus() != KycStatus.IN_REVIEW) {
-            throw new ValidationException("Le document KYC a déjà été traité");
-        }
-
-        kycDocument.setKycStatus(KycStatus.valueOf(status));
-        this.kycDocumentRepository.save(kycDocument);
-    }
-
-    @Auditable(action = "DELETE", entity = "KycDocument")
-    public void deleteKycDocument(long idKycDocument, long idCustomer) {
-        KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
-
-        if (kycDocument.getKycStatus() == KycStatus.IN_REVIEW) {
-            throw new ValidationException("Le document KYC est en cours de traitement");
-        }
-
-        this.kycDocumentRepository.delete(kycDocument);
     }
 }
