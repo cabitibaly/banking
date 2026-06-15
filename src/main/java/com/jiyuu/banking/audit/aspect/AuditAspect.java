@@ -1,6 +1,7 @@
 package com.jiyuu.banking.audit.aspect;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.audit.service.AuditLogService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +28,16 @@ public class AuditAspect {
 
         try {
             result = joinPoint.proceed();
-            this.auditLogService.log(action, entity, entityId, null, result, "SUCCESS", null);
+            Object oldValue = AuditContext.getOldValue();
+            Object newValue = AuditContext.getNewValue();
+            this.auditLogService.log(action, entity, entityId, oldValue, newValue , "SUCCESS", null);
             return result;
         } catch (Exception e) {
-            this.auditLogService.log(action, entity, entityId, null, null, "FAILURE", e.getMessage());
+            Object oldValue = AuditContext.getOldValue();
+            this.auditLogService.log(action, entity, entityId, oldValue, null, "FAILURE", e.getMessage());
             throw e;
+        } finally {
+            AuditContext.clear();
         }
     }
 

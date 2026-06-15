@@ -1,5 +1,6 @@
 package com.jiyuu.banking.service;
 
+import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.CardRequest;
 import com.jiyuu.banking.dto.CardResponse;
 import com.jiyuu.banking.entity.Account;
@@ -27,6 +28,7 @@ public class CardService {
     private final CardNumberGenerator cardNumberGenerator;
     private final Random random;
 
+    @Auditable(action = "CREATE", entity = "CARD")
     public CardResponse createCard(CardRequest request) {
         Account account = this.accountRepository.findBynumeroAccount(request.accountNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
@@ -50,6 +52,7 @@ public class CardService {
         return CardResponse.of(card, cvv);
     }
 
+    @Auditable(action = "UPDATE", entity = "CARD")
     public void activateCard(String cardNumber, String pin) {
         Card card = this.cardRepository.findByCardNumber(cardNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found"));
@@ -65,6 +68,7 @@ public class CardService {
         this.cardRepository.save(card);
     }
 
+    @Auditable(action = "UPDATE", entity = "CARD")
     public void changeState(String cardNumber, CardState state) {
         Card card = this.cardRepository.findByCardNumber(cardNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found"));
@@ -100,6 +104,7 @@ public class CardService {
         return card;
     }
 
+    @Auditable(action = "UPDATE", entity = "CARD")
     public void markCardsAsExpired() {
         List<Card> cards = this.cardRepository
                 .findByExpireAtBeforeAndStateNotIn(

@@ -1,6 +1,8 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
+import com.jiyuu.banking.dto.MemebershipResponse;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.AccountMembership;
 import com.jiyuu.banking.entity.Customer;
@@ -20,7 +22,7 @@ public class MembershipService {
     private final AccountService accountService;
     private final CustomerService customerService;
 
-//    @Auditable(action = "CREATE", entity = "ACCOUNTMEMBERSHIP")
+    @Auditable(action = "UPDATE", entity = "ACCOUNTMEMBERSHIP")
     public void addNewMember(long idAccount, long idCustomer) {
         Optional<AccountMembership> membershipOptional = this.membershipRepository
                 .findByAccount_idAccountAndCustomer_IdCustomer(idAccount, idCustomer);
@@ -38,7 +40,16 @@ public class MembershipService {
                 .customer(customer)
                 .build();
 
-        this.membershipRepository.save(accountMembership);
+        accountMembership = this.membershipRepository.save(accountMembership);
+
+        MemebershipResponse response = MemebershipResponse.of(
+                account,
+                customer,
+                accountMembership.isPrimary(),
+                accountMembership.getDateAdhesion()
+        );
+
+        AuditContext.setOldValue(response);
     }
 
     @Auditable(action = "DELETE", entity = "ACCOUNTMEMBERSHIP")
@@ -49,6 +60,15 @@ public class MembershipService {
         if (accountMembership.isPrimary()) {
             throw new AccessDeniedException("Impossible de supprimer le membre principal");
         }
+
+        MemebershipResponse response = MemebershipResponse.of(
+                accountMembership.getAccount(),
+                accountMembership.getCustomer(),
+                accountMembership.isPrimary(),
+                accountMembership.getDateAdhesion()
+        );
+
+        AuditContext.setOldValue(response);
 
         this.membershipRepository.delete(accountMembership);
     }
