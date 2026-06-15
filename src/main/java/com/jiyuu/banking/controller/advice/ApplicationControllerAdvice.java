@@ -41,6 +41,12 @@ public class ApplicationControllerAdvice {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Une erreur de validation s'est produite");
     }
 
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(value = DuplicateResourceException.class)
+    public @ResponseBody ProblemDetail duplicateResourceException(final DataIntegrityViolationException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(value = UsernameNotFoundException.class)
     public @ResponseBody ProblemDetail usernameNotFoundException(final UsernameNotFoundException exception) {

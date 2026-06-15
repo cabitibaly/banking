@@ -122,35 +122,6 @@ public class AccountService {
         this.accountRepository.save(account);
     }
 
-    @Auditable(action = "CREATE", entity = "ACCOUNTMEMBERSHIP")
-    public void addNewMember(long idAccount, long idCustomer) {
-        Account account = this.accountRepository.findById(idAccount)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-
-        Customer customer = this.customerRepository.findById(idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-
-        AccountMembership accountMembership = AccountMembership.builder()
-                .isPrimary(false)
-                .account(account)
-                .customer(customer)
-                .build();
-
-        this.accountMembershipRepository.save(accountMembership);
-    }
-
-    @Auditable(action = "DELETE", entity = "ACCOUNTMEMBERSHIP")
-    public void deleteMember(long idAccount, long idCustomer) {
-        AccountMembership accountMembership = this.accountMembershipRepository.findByAccount_idAccountAndCustomer_IdCustomer(idAccount, idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("AccountMembership not found"));
-
-        if (accountMembership.isPrimary()) {
-            throw new AccessDeniedException("Impossible de supprimer le membre principal");
-        }
-
-        this.accountMembershipRepository.delete(accountMembership);
-    }
-
     @Auditable(action = "READ", entity = "ACCOUNT")
     public PagedResponse<AccountResponse> getAccounts(AccountSearchCriteria accountSearchCriteria, int page, int size, String sortBy, String direction) {
         Specification<Account> spec = AccountSpecification.withFiler(accountSearchCriteria);
@@ -173,6 +144,11 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         return AccountResponse.of(account);
+    }
+
+    public Account getAccountEntity(long id) {
+        return this.accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
     }
 
     @Auditable(action = "READ", entity = "TRANSACTION")

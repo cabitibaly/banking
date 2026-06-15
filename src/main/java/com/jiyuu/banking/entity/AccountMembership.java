@@ -11,7 +11,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "account_membership")
+@Table(
+        name = "account_membership",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"id_account", "id_customer"})
+        }
+)
 public class AccountMembership extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
