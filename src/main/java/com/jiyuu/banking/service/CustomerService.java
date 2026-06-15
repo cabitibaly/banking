@@ -93,6 +93,11 @@ public class CustomerService {
         return CustomerWithKycDocumentResponse.of(customer);
     }
 
+    public Customer getCustomerEntity(long id) {
+        return this.customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce clientn'existe pas"));
+    }
+
     @Auditable(action = "UPDATE", entity = "CUSTOMER")
     public void changeCustomerStatus(long idCustomer, String status) {
         Customer customer = this.customerRepository.findById(idCustomer)
