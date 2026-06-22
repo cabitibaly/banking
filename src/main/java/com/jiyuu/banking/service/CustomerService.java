@@ -42,16 +42,16 @@ public class CustomerService {
             throw new ValidationException("Ce numéro de téléphone est déjà utilisé");
         }
 
-        Customer customer = new Customer();
+        Customer customer = Customer.builder()
+                .user(user)
+                .statusCustomer(StatusCustomer.PENDING)
+                .nomCustomer(customerRequest.nom())
+                .telephoneCustomer(customerRequest.telephone())
+                .dateNaissance(customerRequest.dateNaissance())
+                .numeroCustomer(this.generateNumeroCustomer(user.getIdUser()))
+                .build();
 
-        customer.setUser(user);
-        customer.setStatusCustomer(StatusCustomer.PENDING);
-        customer.setNomCustomer(customerRequest.nom());
-        customer.setTelephoneCustomer(customerRequest.telephone());
-        customer.setDateNaissance(customerRequest.dateNaissance());
-        customer.setNumeroCustomer(this.generateNumeroCustomer(user.getIdUser()));
-
-        this.customerRepository.save(customer);
+        customer = this.customerRepository.save(customer);
 
         CustomerResponse customerResponse = CustomerResponse.of(customer);
 
