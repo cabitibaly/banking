@@ -1,5 +1,6 @@
 package com.jiyuu.banking.service;
 
+import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.DocumentType;
@@ -37,6 +38,7 @@ public class LoanService {
     private final LoanInstallmentService installmentService;
     private final TransactionsService transactionsService;
 
+    @Auditable(action = "CREATE", entity = "Loan")
     public LoanBaseResponse createLoan(LoanRequest request) {
         if (request.duration() == 0) {
             throw new ValidationException("La durée doit être supérieure à 1");
@@ -66,6 +68,7 @@ public class LoanService {
         return LoanBaseResponse.of(loan);
     }
 
+    @Auditable(action = "CREATE", entity = "LoanDocument")
     public void addDocument(long idLoan, DocumentRequest request) {
         Loan loan = this.loanRepository.findById(idLoan)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce crédit n'existe pas"));
@@ -104,6 +107,7 @@ public class LoanService {
         this.loanDocumentRepository.save(loanDocument);
     }
 
+    @Auditable(action = "READ", entity = "Loan")
     public PagedResponse<LoanBaseResponse> AllLoans(int page, int size, String soortBy, String direction) {
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(soortBy).descending()
@@ -117,6 +121,7 @@ public class LoanService {
         return PagedResponse.of(loans);
     }
 
+    @Auditable(action = "READ", entity = "Loan")
     public LoanWithDocumentResponse getLoan(long id) {
         Loan loan = this.loanRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce crédit n'existe pas")
@@ -125,6 +130,7 @@ public class LoanService {
         return LoanWithDocumentResponse.of(loan);
     }
 
+    @Auditable(action = "UPDATE", entity = "Loan")
     public void approveLoan(long id, ApproveLoanRequest request) {
 
         if(request.interest().compareTo(BigDecimal.ZERO) == 0) {
@@ -169,6 +175,7 @@ public class LoanService {
         this.installmentService.generateInstallment(loan);
     }
 
+    @Auditable(action = "UPDATE", entity = "Loan")
     public void rejectLoan(long id) {
         Loan loan = this.loanRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce crédit n'existe pas")
@@ -194,6 +201,7 @@ public class LoanService {
         this.loanRepository.save(loan);
     }
 
+    @Auditable(action = "UPDATE", entity = "Loan")
     public void earlyRepayment(long id) {
         Loan loan = this.loanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce crédit n'existe pas"));

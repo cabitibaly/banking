@@ -1,6 +1,7 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.AccountStatus;
@@ -74,7 +75,7 @@ public class AccountService {
         this.cardService = cardService;
     }
 
-//    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
+    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
     public void createAccount(AccountRequest accountRequest) {
         Customer customer = this.customerRepository.findById(accountRequest.idCustomer())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -98,6 +99,10 @@ public class AccountService {
                 .build();
 
         this.accountMembershipRepository.save(accountMembership);
+
+        AccountResponse response = AccountResponse.of(account);
+
+        AuditContext.setNewValue(response);
     }
 
     @Auditable(action = "UPDATE", entity = "ACCOUNT")
@@ -105,8 +110,14 @@ public class AccountService {
         Account account = this.accountRepository.findById(idAccount)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
+        AccountResponse oldValue = AccountResponse.of(account);
+        AuditContext.setOldValue(oldValue);
+
         account.setAccountStatus(AccountStatus.valueOf(status));
-        this.accountRepository.save(account);
+        account = this.accountRepository.save(account);
+
+        AccountResponse newValue = AccountResponse.of(account);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "ACCOUNT")
@@ -118,8 +129,14 @@ public class AccountService {
             throw new ValidationException("Le montant de découverte ne peut pas dépasser le maximum de " + MAX_DECOUVERT);
         }
 
+        AccountResponse oldValue = AccountResponse.of(account);
+        AuditContext.setOldValue(oldValue);
+
         account.setDecouvert(decouvert);
-        this.accountRepository.save(account);
+        account = this.accountRepository.save(account);
+
+        AccountResponse newValue = AccountResponse.of(account);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "READ", entity = "ACCOUNT")

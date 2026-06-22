@@ -25,7 +25,7 @@ import java.math.BigDecimal;
 public class ProcessTransactionService {
     private final AccountRepository accountRepository;
 
-//    @Auditable(action = "CREATE", entity = "TRANSACTION")
+    @Auditable(action = "CREATE", entity = "TRANSACTION")
     @Transactional(isolation = Isolation.SERIALIZABLE, rollbackFor = Exception.class)
     public void process(TransactionRequest request) {
         switch (request.type()) {

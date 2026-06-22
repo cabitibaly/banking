@@ -11,7 +11,6 @@ import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.AccountMembershipRepository;
 import com.jiyuu.banking.repository.AccountRepository;
-import com.jiyuu.banking.repository.LoanInstallmentRepository;
 import com.jiyuu.banking.repository.TransactionsRepository;
 
 import lombok.AllArgsConstructor;

@@ -1,6 +1,7 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Customer;
 import com.jiyuu.banking.entity.User;
@@ -52,7 +53,10 @@ public class CustomerService {
 
         this.customerRepository.save(customer);
 
-        return CustomerResponse.of(customer);
+        CustomerResponse customerResponse = CustomerResponse.of(customer);
+
+        AuditContext.setNewValue(customerResponse);
+        return customerResponse;
     }
 
     private String generateNumeroCustomer(long id) {
@@ -111,8 +115,14 @@ public class CustomerService {
             });
         }
 
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(oldValue);
+
         customer.setStatusCustomer(StatusCustomer.valueOf(status));
-        this.customerRepository.save(customer);
+        customer = this.customerRepository.save(customer);
+
+        CustomerResponse newValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "CUSTOMER")
@@ -120,11 +130,17 @@ public class CustomerService {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
 
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(oldValue);
+
         customer.setNomCustomer(customerRequest.nom());
         customer.setTelephoneCustomer(customerRequest.telephone());
         customer.setDateNaissance(customerRequest.dateNaissance());
 
-        this.customerRepository.save(customer);
+        customer = this.customerRepository.save(customer);
+
+        CustomerResponse newValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(newValue);
     }
 
     @Auditable(action = "DELETE", entity = "CUSTOMER")
@@ -132,6 +148,9 @@ public class CustomerService {
         Customer customer = this.customerRepository.findById(idCustomer).orElseThrow(
                 () -> new ResourceNotFoundException("Ce client n'existe pas")
         );
+
+        CustomerResponse newValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(newValue);
 
         this.customerRepository.delete(customer);
     }
