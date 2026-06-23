@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -36,22 +37,23 @@ public class CustomerService {
             throw new ValidationException("Vous devez avoir au moins 18 ans pour créer un compte");
         }
 
-        Optional<Customer> customerOptional = this.customerRepository.findBytelephoneCustomer(customerRequest.telephone());
+        Optional<Customer> customerOptional = this.customerRepository.
+                findBytelephoneCustomer(customerRequest.telephone());
 
         if (customerOptional.isPresent()) {
             throw new ValidationException("Ce numéro de téléphone est déjà utilisé");
         }
 
-        Customer customer = new Customer();
+        Customer customer = Customer.builder()
+                .user(user)
+                .statusCustomer(StatusCustomer.PENDING)
+                .nomCustomer(customerRequest.nom())
+                .telephoneCustomer(customerRequest.telephone())
+                .dateNaissance(customerRequest.dateNaissance())
+                .numeroCustomer(this.generateNumeroCustomer(user.getIdUser()))
+                .build();
 
-        customer.setUser(user);
-        customer.setStatusCustomer(StatusCustomer.PENDING);
-        customer.setNomCustomer(customerRequest.nom());
-        customer.setTelephoneCustomer(customerRequest.telephone());
-        customer.setDateNaissance(customerRequest.dateNaissance());
-        customer.setNumeroCustomer(this.generateNumeroCustomer(user.getIdUser()));
-
-        this.customerRepository.save(customer);
+        customer = this.customerRepository.save(customer);
 
         CustomerResponse customerResponse = CustomerResponse.of(customer);
 
@@ -122,13 +124,22 @@ public class CustomerService {
         customer = this.customerRepository.save(customer);
 
         CustomerResponse newValue = CustomerResponse.of(customer);
-        AuditContext.setOldValue(newValue);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "CUSTOMER")
     public void updateCustomer(long idCustomer, CustomerRequest customerRequest) {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
+
+        if(!Objects.equals(customer.getTelephoneCustomer(), customerRequest.telephone())) {
+            Optional<Customer> customerOptional = this.customerRepository
+                    .findBytelephoneCustomer(customerRequest.telephone());
+
+            if (customerOptional.isPresent()) {
+                throw new ValidationException("Ce numéro de téléphone est déjà utilisé");
+            }
+        }
 
         CustomerResponse oldValue = CustomerResponse.of(customer);
         AuditContext.setOldValue(oldValue);
@@ -140,7 +151,7 @@ public class CustomerService {
         customer = this.customerRepository.save(customer);
 
         CustomerResponse newValue = CustomerResponse.of(customer);
-        AuditContext.setOldValue(newValue);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "DELETE", entity = "CUSTOMER")
