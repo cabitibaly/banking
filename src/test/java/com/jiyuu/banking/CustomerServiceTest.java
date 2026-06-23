@@ -175,14 +175,110 @@ public class CustomerServiceTest {
     }
 
     @Test
-    public void shouldThrowsResourceNotFoundExceptionWhenCustomerNotFoundUC() {
+    public void shouldThrowResourceNotFoundExceptionWhenCustomerNotFound() {
         when(customerRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
+        CustomerRequest request = new CustomerRequest(
+                "Kyotaka Ayanokoji",
+                "66583205",
+                LocalDateTime.of(2000, 6, 22, 0, 0)
+        );
+
+
+
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> customerService.updateCustomer(1L, null)
+                () -> customerService.updateCustomer(1L, request)
         );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenTelephoneIsAlreadyUsed() {
+        User user = this.buildUser();
+        Customer customer = this.buildCustomer(user, "VERIFIED");
+
+        CustomerRequest request = new CustomerRequest(
+                "Kyotaka Ayanokoji",
+                "61500768",
+                LocalDateTime.of(2000, 6, 22, 0, 0)
+        );
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerRepository.findBytelephoneCustomer("61500768"))
+                .thenReturn(Optional.of(customer));
+
+        assertThrows(
+                ValidationException.class,
+                () -> customerService.updateCustomer(1L, request)
+        );
+    }
+
+    @Test
+    public void shouldUpdateCustomerWhenTelephoneIsDifferentAndNotUsed() {
+        User user = this.buildUser();
+        Customer customer = this.buildCustomer(user, "VERIFIED");
+        Customer customerSave = this.buildCustomer(user, "VERIFIED");
+
+        CustomerRequest request = new CustomerRequest(
+                "Kyotaka Ayanokoji",
+                "61500768",
+                LocalDateTime.of(2000, 6, 22, 0, 0)
+        );
+
+        customerSave.setNomCustomer(request.nom());
+        customerSave.setTelephoneCustomer(request.telephone());
+        customerSave.setDateNaissance(request.dateNaissance());
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerRepository.findBytelephoneCustomer("61500768"))
+                .thenReturn(Optional.empty());
+
+        when(customerRepository.save(any(Customer.class)))
+                .thenReturn(customerSave);
+
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        customerService.updateCustomer(1L, request);
+        CustomerResponse newValue = CustomerResponse.of(customerSave);
+
+        verify(customerRepository).save(customer);
+        assertEquals(oldValue, AuditContext.getOldValue());
+        assertEquals(newValue, AuditContext.getNewValue());
+    }
+
+    @Test
+    public void shouldUpdateCustomerWhenTelephoneIsNotDifferent() {
+        User user = this.buildUser();
+        Customer customer = this.buildCustomer(user, "VERIFIED");
+        Customer customerSave = this.buildCustomer(user, "VERIFIED");
+
+        CustomerRequest request = new CustomerRequest(
+                "Kyotaka Ayanokoji",
+                "66583205",
+                LocalDateTime.of(2000, 6, 22, 0, 0)
+        );
+
+        customerSave.setNomCustomer(request.nom());
+        customerSave.setTelephoneCustomer(request.telephone());
+        customerSave.setDateNaissance(request.dateNaissance());
+
+        when(customerRepository.save(any(Customer.class)))
+                .thenReturn(customerSave);
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        customerService.updateCustomer(1L, request);
+        CustomerResponse newValue = CustomerResponse.of(customerSave);
+
+        verify(customerRepository).save(customer);
+        assertEquals(oldValue, AuditContext.getOldValue());
+        assertEquals(newValue, AuditContext.getNewValue());
     }
 
     private User buildUser() {
@@ -226,7 +322,7 @@ public class CustomerServiceTest {
         return Customer.builder()
                 .idCustomer(1L)
                 .dateNaissance(LocalDateTime.of(2000, 6, 22, 0, 0))
-                .telephoneCustomer("66583205")
+                .telephoneCustomer("61500768")
                 .nomCustomer("Kyotaka Ayanokoji")
                 .numeroCustomer("CLI12345678")
                 .statusCustomer(StatusCustomer.PENDING)
