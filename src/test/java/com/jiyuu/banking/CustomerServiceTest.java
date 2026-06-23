@@ -1,12 +1,17 @@
 package com.jiyuu.banking;
 
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.CustomerRequest;
 import com.jiyuu.banking.dto.CustomerResponse;
 import com.jiyuu.banking.entity.Customer;
+import com.jiyuu.banking.entity.KycDocument;
 import com.jiyuu.banking.entity.Role;
 import com.jiyuu.banking.entity.User;
+import com.jiyuu.banking.enums.KycStatus;
+import com.jiyuu.banking.enums.KycType;
 import com.jiyuu.banking.enums.StatusCustomer;
 import com.jiyuu.banking.enums.TypeOfRole;
+import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.CustomerRepository;
 import com.jiyuu.banking.service.CustomerService;
@@ -17,6 +22,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -106,6 +113,78 @@ public class CustomerServiceTest {
         verify(customerRepository).findBytelephoneCustomer("66583205");
     }
 
+    @Test
+    public void shouldThrowsResourceNotFoundExceptionWhenCustomerNotFound() {
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> customerService.changeCustomerStatus(1L, "VERIFIED")
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenKycDocumentsIsEmpty() {
+        User user = this.buildUser();
+        Customer customer = this.buildCustomer(user, "PENDING");
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        assertThrows(
+                ValidationException.class,
+                () -> customerService.changeCustomerStatus(1L, "VERIFIED")
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenAllDocsAreNotVerified() {
+        User user = this.buildUser();
+        Customer customer = this.buildCustomerWithKyc(user, KycStatus.PENDING);
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        assertThrows(
+                ValidationException.class,
+                () -> customerService.changeCustomerStatus(1L, "VERIFIED")
+        );
+    }
+
+    @Test
+    public void shouldChangeCustomerStatusWhenEverythingIsCorrect() {
+        User user = this.buildUser();
+        Customer customer = this.buildCustomerWithKyc(user, KycStatus.VERIFIED);
+        Customer customerSave = this.buildCustomerWithKyc(user, KycStatus.VERIFIED);
+        customerSave.setStatusCustomer(StatusCustomer.VERIFIED);
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerRepository.save(customer))
+                .thenReturn(customerSave);
+
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        customerService.changeCustomerStatus(1L, "VERIFIED");
+        CustomerResponse newValue = CustomerResponse.of(customerSave);
+
+        verify(customerRepository).save(customer);
+        assertEquals(oldValue, AuditContext.getOldValue());
+        assertEquals(newValue, AuditContext.getNewValue());
+    }
+
+    @Test
+    public void shouldThrowsResourceNotFoundExceptionWhenCustomerNotFoundUC() {
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> customerService.updateCustomer(1L, null)
+        );
+    }
+
     private User buildUser() {
         Role role = new Role(1L, TypeOfRole.valueOf("CUSTOMER"));
         return User.builder()
@@ -128,6 +207,31 @@ public class CustomerServiceTest {
                 .numeroCustomer("CLI12345678")
                 .statusCustomer(StatusCustomer.valueOf(status))
                 .user(user)
+                .kycDocuments(new ArrayList<>())
+                .build();
+    }
+
+    private Customer buildCustomerWithKyc(User user, KycStatus status) {
+        List<KycDocument> kycDocuments = new ArrayList<>();
+
+        KycDocument doc = KycDocument.builder()
+                .idKycDocument(1L)
+                .fileUrl("http://localhost:8080")
+                .kycStatus(status)
+                .kycType(KycType.CNIB)
+                .build();
+
+        kycDocuments.add(doc);
+
+        return Customer.builder()
+                .idCustomer(1L)
+                .dateNaissance(LocalDateTime.of(2000, 6, 22, 0, 0))
+                .telephoneCustomer("66583205")
+                .nomCustomer("Kyotaka Ayanokoji")
+                .numeroCustomer("CLI12345678")
+                .statusCustomer(StatusCustomer.PENDING)
+                .user(user)
+                .kycDocuments(kycDocuments)
                 .build();
     }
 }
