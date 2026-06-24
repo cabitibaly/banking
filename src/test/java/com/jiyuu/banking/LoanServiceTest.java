@@ -79,7 +79,7 @@ public class LoanServiceTest {
     }
 
     @Test
-    public void shouldThrowResourceNotFountWhenCustomerIsNotFound() {
+    public void shouldThrowResourceNotFoundWhenCustomerIsNotFound() {
         LoanRequest request = new LoanRequest(
                 "12345678",
                 "ABC123456789",
@@ -99,7 +99,7 @@ public class LoanServiceTest {
     }
 
     @Test
-    public void shouldThrowResourceNotFountWhenAccountIsNotFound() {
+    public void shouldThrowResourceNotFoundWhenAccountIsNotFound() {
         LoanRequest request = new LoanRequest(
                 "12345678",
                 "ABC123456789",
@@ -124,8 +124,8 @@ public class LoanServiceTest {
     }
 
     @Test
-    public void shouldCreateLoanSuccessfullyWithDraftStatus.() {
-        Loan loan = this.buildLoan();
+    public void shouldCreateLoanSuccessfullyWithDraftStatus() {
+        Loan loan = this.buildLoan(LoanStatus.DRAFT);
         LoanRequest request = new LoanRequest(
                 "12345678",
                 "ABC123456789",
@@ -154,7 +154,64 @@ public class LoanServiceTest {
         assertEquals(response, AuditContext.getNewValue());
     }
 
-    private Loan buildLoan() {
+    @Test
+    public void shouldThrowResourceNotFoundWhenLoanIsNotFound() {
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> this.loanService.rejectLoan(1L)
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenLoanStatusIsDRAFT() {
+        Loan loan = this.buildLoan(LoanStatus.DRAFT);
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        assertThrows(
+                ValidationException.class,
+                () -> this.loanService.rejectLoan(1L)
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenLoanStatusIsAlreadyTreated() {
+        Loan loan = this.buildLoan(LoanStatus.APPROVED);
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        assertThrows(
+                ValidationException.class,
+                () -> this.loanService.rejectLoan(1L)
+        );
+    }
+
+    @Test
+    public void shouldRejectLoanSuccessfully() {
+        Loan loan = this.buildLoan(LoanStatus.PENDING);
+        Loan loanSave = this.buildLoan(LoanStatus.REJECTED);
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        when(this.loanRepository.save(any(Loan.class)))
+                .thenReturn(loanSave);
+
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        this.loanService.rejectLoan(1L);
+        LoanBaseResponse newValue = LoanBaseResponse.of(loanSave);
+
+        verify(loanRepository).save(loan);
+        assertEquals(oldValue, AuditContext.getOldValue());
+        assertEquals(newValue, AuditContext.getNewValue());
+    }
+
+    private Loan buildLoan(LoanStatus status) {
         Account account = this.buildAccount();
         Customer customer = this.buildCustomer();
 
@@ -162,7 +219,7 @@ public class LoanServiceTest {
                 .idLoan(1L)
                 .account(account)
                 .customer(customer)
-                .loanStatus(LoanStatus.DRAFT)
+                .loanStatus(status)
                 .duration(12)
                 .reason("Achat de console")
                 .amount(BigDecimal.valueOf(1000000))

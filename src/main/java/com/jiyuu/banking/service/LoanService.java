@@ -201,8 +201,14 @@ public class LoanService {
             throw new ValidationException("Ce crédit a dejà été traité.");
         }
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setLoanStatus(LoanStatus.REJECTED);
-        this.loanRepository.save(loan);
+        loan = this.loanRepository.save(loan);
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "Loan")
