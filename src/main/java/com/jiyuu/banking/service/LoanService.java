@@ -1,6 +1,7 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.DocumentType;
@@ -65,7 +66,10 @@ public class LoanService {
                 .build();
 
         loan = this.loanRepository.save(loan);
-        return LoanBaseResponse.of(loan);
+
+        LoanBaseResponse response = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(response);
+        return response;
     }
 
     @Auditable(action = "CREATE", entity = "LoanDocument")
