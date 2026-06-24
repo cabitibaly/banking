@@ -1,19 +1,20 @@
 package com.jiyuu.banking;
 
 import com.jiyuu.banking.audit.context.AuditContext;
-import com.jiyuu.banking.dto.LoanBaseResponse;
-import com.jiyuu.banking.dto.LoanRequest;
+import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.Customer;
 import com.jiyuu.banking.entity.Loan;
-import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.enums.*;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.AccountRepository;
 import com.jiyuu.banking.repository.CustomerRepository;
 import com.jiyuu.banking.repository.LoanRepository;
+import com.jiyuu.banking.service.LoanInstallmentService;
 import com.jiyuu.banking.service.LoanService;
+import com.jiyuu.banking.service.TransactionsService;
+import org.hamcrest.core.IsNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,14 +22,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class LoanServiceTest {
@@ -40,6 +42,12 @@ public class LoanServiceTest {
 
     @Mock
     private AccountRepository accountRepository;
+
+    @Mock
+    private TransactionsService transactionsService;
+
+    @Mock
+    private LoanInstallmentService installmentService;
 
     @InjectMocks
     private LoanService loanService;
@@ -207,6 +215,115 @@ public class LoanServiceTest {
         LoanBaseResponse newValue = LoanBaseResponse.of(loanSave);
 
         verify(loanRepository).save(loan);
+        assertEquals(oldValue, AuditContext.getOldValue());
+        assertEquals(newValue, AuditContext.getNewValue());
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenInterestIsInvalid() {
+        ApproveLoanRequest request = new ApproveLoanRequest(
+                BigDecimal.ZERO,
+                "Il le merite"
+        );
+
+        assertThrows(
+                ValidationException.class,
+                () -> this.loanService.approveLoan(1L, request)
+        );
+    }
+
+    @Test
+    public void shouldThrowResourceNotFoundWhenLoanIsNotFoundOnApproveLoan() {
+        ApproveLoanRequest request = new ApproveLoanRequest(
+                BigDecimal.valueOf(10),
+                "Il le merite"
+        );
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> this.loanService.approveLoan(1L, request)
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenLoanStatusIsDRAFTOnApproveLoan() {
+        Loan loan = this.buildLoan(LoanStatus.DRAFT);
+        ApproveLoanRequest request = new ApproveLoanRequest(
+                BigDecimal.valueOf(10),
+                "Il le merite"
+        );
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        assertThrows(
+                ValidationException.class,
+                () -> this.loanService.approveLoan(1L, request)
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenLoanStatusIsAlreadyTreatedOnApproveLoan() {
+        Loan loan = this.buildLoan(LoanStatus.APPROVED);
+        ApproveLoanRequest request = new ApproveLoanRequest(
+                BigDecimal.valueOf(10),
+                "Il le merite"
+        );
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        assertThrows(
+                ValidationException.class,
+                () -> this.loanService.approveLoan(1L, request)
+        );
+    }
+
+    @Test
+    public void shouldApproveLoanSuccessfully() {
+        Loan loan = this.buildLoan(LoanStatus.PENDING);
+        Loan loanSave = this.buildLoan(LoanStatus.APPROVED);
+        ApproveLoanRequest request = new ApproveLoanRequest(
+                BigDecimal.valueOf(10),
+                "Il le merite"
+        );
+
+        TransactionResponse response = new TransactionResponse(
+                1L,
+                "TRANS1234567",
+                "XOF",
+                "DEPOSIT",
+                loan.getAmount(),
+                "SUCCESS",
+                null,
+                null,
+                loan.getAccount().getNumeroAccount(),
+                Instant.now().toString()
+        );
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        when(this.transactionsService.createTransaction(any(TransactionRequest.class), isNull()))
+                .thenReturn(response);
+
+        doNothing().when(this.installmentService)
+                .generateInstallment(loan);
+
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        this.loanService.approveLoan(1L, request);
+
+        loanSave.setInterestRate(BigDecimal.valueOf(10));
+        loanSave.setRemainingAmount(loan.getAmount());
+        loanSave.setDisbursementDate(LocalDate.now());
+        loanSave.setComments(request.comments());
+        LoanBaseResponse newValue = LoanBaseResponse.of(loanSave);
+
+        verify(this.transactionsService).createTransaction(any(TransactionRequest.class), isNull());
+        verify(this.installmentService).generateInstallment(loan);
         assertEquals(oldValue, AuditContext.getOldValue());
         assertEquals(newValue, AuditContext.getNewValue());
     }

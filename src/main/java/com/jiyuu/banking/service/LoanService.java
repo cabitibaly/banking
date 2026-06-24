@@ -170,11 +170,17 @@ public class LoanService {
 
         this.transactionsService.createTransaction(transactionRequest, null);
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setLoanStatus(LoanStatus.APPROVED);
         loan.setRemainingAmount(loan.getAmount());
         loan.setDisbursementDate(LocalDate.now());
         loan.setInterestRate(request.interest());
         loan.setComments(request.comments());
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
 
         this.installmentService.generateInstallment(loan);
     }
