@@ -114,7 +114,6 @@ public class LoanInstallmentService {
 
     @Auditable(action = "UPDATE", entity = "LoanInstallment")
     public void repayment(Loan loan, Transactions transactions) {
-
         List<LoanInstallment> installments = this.installmentRepository
                 .findByLoanOverdueOrPaid(loan);
 
