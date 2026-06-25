@@ -5,6 +5,7 @@ import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Account;
 import com.jiyuu.banking.entity.Customer;
 import com.jiyuu.banking.entity.Loan;
+import com.jiyuu.banking.entity.Transactions;
 import com.jiyuu.banking.enums.*;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
@@ -14,7 +15,6 @@ import com.jiyuu.banking.repository.LoanRepository;
 import com.jiyuu.banking.service.LoanInstallmentService;
 import com.jiyuu.banking.service.LoanService;
 import com.jiyuu.banking.service.TransactionsService;
-import org.hamcrest.core.IsNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -324,6 +324,84 @@ public class LoanServiceTest {
 
         verify(this.transactionsService).createTransaction(any(TransactionRequest.class), isNull());
         verify(this.installmentService).generateInstallment(loan);
+        assertEquals(oldValue, AuditContext.getOldValue());
+        assertEquals(newValue, AuditContext.getNewValue());
+    }
+
+    @Test
+    public void shouldThrowResourceNotFoundWhenLoanIsNotFoundOnEarlyRepayment() {
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> loanService.earlyRepayment(1L)
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenStatusIsDraftOnEarlyRepayment() {
+        Loan loan = this.buildLoan(LoanStatus.DRAFT);
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        assertThrows(
+                ValidationException.class,
+                () -> loanService.earlyRepayment(1L)
+        );
+    }
+
+    @Test
+    public void shouldThrowValidationExceptionWhenLoanIsTreatedOnEarlyRepayment() {
+        Loan loan = this.buildLoan(LoanStatus.CLOSED);
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        assertThrows(
+                ValidationException.class,
+                () -> loanService.earlyRepayment(1L)
+        );
+    }
+
+    @Test
+    public void shouldProcessEarlyRepaymentSuccessfully() {
+        Loan loan = this.buildLoan(LoanStatus.PENDING);
+        Loan loanSave = this.buildLoan(LoanStatus.CLOSED);
+        loanSave.setRemainingAmount(BigDecimal.ZERO);
+
+        Transactions transactions = Transactions.builder()
+                .idTransaction(1L)
+                .amountTransaction(loan.getRemainingAmount())
+                .currencyTransaction(Currency.XOF)
+                .sourceAccount(loan.getAccount())
+                .targetAccount(null)
+                .transactionStatus(TransactionStatus.COMPLETED)
+                .transactionRef("TRANS12345678")
+                .transactionType(TransactionType.REPAYMENT)
+                .build();
+
+        when(this.loanRepository.findById(1L))
+                .thenReturn(Optional.of(loan));
+
+        when(this.loanRepository.save(loan))
+                .thenReturn(loanSave);
+
+        when(this.transactionsService.createTransactionEntity(any(TransactionRequest.class), isNull()))
+                .thenReturn(transactions);
+
+        doNothing().when(this.installmentService)
+                .repayment(loan, transactions);
+
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        LoanBaseResponse newValue = LoanBaseResponse.of(loanSave);
+        this.loanService.earlyRepayment(1L);
+
+
+        verify(this.loanRepository).save(loan);
+        verify(this.transactionsService).createTransactionEntity(any(TransactionRequest.class), isNull());
+        verify(this.installmentService).repayment(loan, transactions);
         assertEquals(oldValue, AuditContext.getOldValue());
         assertEquals(newValue, AuditContext.getNewValue());
     }

@@ -237,10 +237,6 @@ public class LoanService {
         }
 
         BigDecimal remainingAmount = loan.getRemainingAmount();
-        if (remainingAmount.compareTo(BigDecimal.ZERO) == 0 && loan.getLoanStatus() == LoanStatus.CLOSED) {
-            throw new ValidationException("Ce crédit a déjà été payé");
-        }
-
         TransactionRequest request = TransactionRequest.builder()
                 .amount(remainingAmount)
                 .currency("XOF")
@@ -251,9 +247,15 @@ public class LoanService {
         Transactions transactions = this.transactionsService.createTransactionEntity(request, null);
         this.installmentService.repayment(loan, transactions);
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setRemainingAmount(BigDecimal.ZERO);
         loan.setLoanStatus(LoanStatus.CLOSED);
-        this.loanRepository.save(loan);
+        loan = this.loanRepository.save(loan);
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
     }
 
     public void processMonthlyInstallment() {
