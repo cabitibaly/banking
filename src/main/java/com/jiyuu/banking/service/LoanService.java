@@ -1,6 +1,7 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.DocumentType;
@@ -65,7 +66,10 @@ public class LoanService {
                 .build();
 
         loan = this.loanRepository.save(loan);
-        return LoanBaseResponse.of(loan);
+
+        LoanBaseResponse response = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(response);
+        return response;
     }
 
     @Auditable(action = "CREATE", entity = "LoanDocument")
@@ -166,11 +170,17 @@ public class LoanService {
 
         this.transactionsService.createTransaction(transactionRequest, null);
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setLoanStatus(LoanStatus.APPROVED);
         loan.setRemainingAmount(loan.getAmount());
         loan.setDisbursementDate(LocalDate.now());
         loan.setInterestRate(request.interest());
         loan.setComments(request.comments());
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
 
         this.installmentService.generateInstallment(loan);
     }
@@ -197,8 +207,14 @@ public class LoanService {
             throw new ValidationException("Ce crédit a dejà été traité.");
         }
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setLoanStatus(LoanStatus.REJECTED);
-        this.loanRepository.save(loan);
+        loan = this.loanRepository.save(loan);
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "Loan")
@@ -221,10 +237,6 @@ public class LoanService {
         }
 
         BigDecimal remainingAmount = loan.getRemainingAmount();
-        if (remainingAmount.compareTo(BigDecimal.ZERO) == 0 && loan.getLoanStatus() == LoanStatus.CLOSED) {
-            throw new ValidationException("Ce crédit a déjà été payé");
-        }
-
         TransactionRequest request = TransactionRequest.builder()
                 .amount(remainingAmount)
                 .currency("XOF")
@@ -235,9 +247,15 @@ public class LoanService {
         Transactions transactions = this.transactionsService.createTransactionEntity(request, null);
         this.installmentService.repayment(loan, transactions);
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setRemainingAmount(BigDecimal.ZERO);
         loan.setLoanStatus(LoanStatus.CLOSED);
-        this.loanRepository.save(loan);
+        loan = this.loanRepository.save(loan);
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
     }
 
     public void processMonthlyInstallment() {
