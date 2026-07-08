@@ -96,8 +96,8 @@ HTTP Request → JwtAuthFilter → Controller → Service (@Transactional) → R
 ### 1. Cloner le projet
 
 ```bash
-git clone https://github.com/votre-username/banksim-api.git
-cd banksim-api
+git clone https://github.com/cabitibaly/banking.git
+cd banking
 ```
 
 ### 2. Configurer les variables d'environnement
