@@ -11,20 +11,15 @@
 - [Architecture](#architecture)
 - [Prérequis](#prérequis)
 - [Installation & Démarrage](#installation--démarrage)
-- [Variables d'environnement](#variables-denvironnement)
 - [Modules fonctionnels](#modules-fonctionnels)
 - [Endpoints REST](#endpoints-rest)
 - [Sécurité (JWT)](#sécurité-jwt)
-- [Base de données](#base-de-données)
-- [Tests](#tests)
-- [Documentation API](#documentation-api)
-- [Contribuer](#contribuer)
 
 ---
 
 ## Aperçu
 
-BankSim API est un projet d'exercice Spring Boot qui simule le backend d'une banque. Il couvre l'ensemble du cycle de vie bancaire : inscription KYC, ouverture de comptes, virements ACID, octroi de crédits avec tableau d'amortissement, cartes bancaires et traçabilité complète via audit log.
+Banking API est un projet d'exercice Spring Boot qui simule le backend d'une banque. Il couvre l'ensemble du cycle de vie bancaire : inscription KYC, ouverture de comptes, virements ACID, octroi de crédits avec tableau d'amortissement, cartes bancaires et traçabilité complète via audit log.
 
 **Trois rôles utilisateurs :**
 
@@ -44,8 +39,6 @@ BankSim API est un projet d'exercice Spring Boot qui simule le backend d'une ban
 | Sécurité | Spring Security + JWT (Access + Refresh Token) |
 | Persistence | Spring Data JPA / Hibernate |
 | Base de données | PostgreSQL (prod) / H2 (tests) |
-| Migration BDD | Flyway |
-| Documentation API | SpringDoc OpenAPI 3 (Swagger UI) |
 | Validation | Jakarta Bean Validation |
 | Audit | Spring AOP (`@Auditable`) |
 | Tests | JUnit 5, Mockito, Testcontainers |
@@ -100,59 +93,13 @@ git clone https://github.com/cabitibaly/banking.git
 cd banking
 ```
 
-### 2. Configurer les variables d'environnement
-
-Copier le fichier d'exemple et renseigner vos valeurs :
-
-```bash
-cp .env.example .env
-```
-
-### 3. Créer la base de données PostgreSQL
-
-```sql
-CREATE DATABASE banksim;
-CREATE USER banksim_user WITH PASSWORD 'votre_mot_de_passe';
-GRANT ALL PRIVILEGES ON DATABASE banksim TO banksim_user;
-```
-
-### 4. Lancer l'application
-
-```bash
-# Profil développement (H2 en mémoire)
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
-
-# Profil production (PostgreSQL)
-mvn spring-boot:run -Dspring-boot.run.profiles=prod
-```
-
-L'API est disponible sur `http://localhost:8080`.  
-Swagger UI : `http://localhost:8080/swagger-ui.html`
+L'API est disponible sur `http://localhost:8080`.
 
 ### Avec Docker Compose (optionnel)
 
 ```bash
 docker-compose up -d
 ```
-
----
-
-## Variables d'environnement
-
-| Variable | Description | Exemple |
-|----------|-------------|---------|
-| `DB_URL` | URL JDBC PostgreSQL | `jdbc:postgresql://localhost:5432/banksim` |
-| `DB_USERNAME` | Utilisateur BDD | `banksim_user` |
-| `DB_PASSWORD` | Mot de passe BDD | `secret` |
-| `JWT_SECRET` | Clé de signature JWT (min 256 bits) | `your-256-bit-secret-key-here` |
-| `JWT_EXPIRY_MS` | Durée de vie access token (ms) | `900000` *(15 min)* |
-| `JWT_REFRESH_EXPIRY_MS` | Durée de vie refresh token (ms) | `604800000` *(7 jours)* |
-| `MAIL_HOST` | Serveur SMTP | `smtp.gmail.com` |
-| `MAIL_PORT` | Port SMTP | `587` |
-| `MAIL_USERNAME` | Adresse email | `no-reply@banksim.com` |
-| `MAIL_PASSWORD` | Mot de passe email | `app-password` |
-| `APP_FRONTEND_URL` | URL frontend (liens emails) | `http://localhost:3000` |
-
 ---
 
 ## Modules fonctionnels
@@ -166,8 +113,7 @@ docker-compose up -d
 | 5 | **Crédits** | Workflow approbation, tableau d'amortissement, remboursement anticipé |
 | 6 | **Cartes** | Débit/crédit, plafonds, blocage, activation PIN |
 | 7 | **Notifications** | Alertes email + BDD (solde bas, virement reçu, crédit approuvé…) |
-| 8 | **Reporting** | Dashboard, export CSV/PDF, statistiques crédits |
-| 9 | **Audit Log** | Traçabilité complète via AOP — qui, quoi, quand, ancienne/nouvelle valeur |
+| 8 | **Audit Log** | Traçabilité complète via AOP — qui, quoi, quand, ancienne/nouvelle valeur |
 
 ---
 
@@ -235,97 +181,17 @@ POST /auth/refresh
   → { accessToken }   (avec refreshToken dans le body)
 ```
 
-- Access token : `15 min` — signé HMAC SHA-256
+- Access token : `1h` — signé HMAC SHA-256
 - Refresh token : `7 jours` — opaque, stocké en BDD, révocable
 - Mots de passe : BCrypt (strength 12)
-- Blocage compte : après 5 tentatives échouées
-- `@PreAuthorize("hasRole('ADMIN')")` sur les endpoints sensibles
 
 ---
-
-## Base de données
-
-Les migrations sont gérées par **Flyway**, dans `src/main/resources/db/migration/` :
-
-```
-V1__init_schema.sql
-V2__seed_roles.sql
-V3__add_audit_log.sql
-...
-```
-
-**Entités principales et relations JPA :**
-
-```
-Users ──< RefreshToken
-Users ──< Notifications
-Users >── Customer ──< Account ──< Transaction
-                   ──< Attachment      ──< Card
-                   ──< Loan ──< LoanInstallment
-                              ──> Account (décaissement)
-Account >──< CustomerAccount >── Customer  (compte joint)
-Users ──< AuditLog
-```
-
-> ⚠️ Tous les montants sont en `BigDecimal`. Utilisation de l'Optimistic Locking (`@Version`) sur `Account` pour éviter les race conditions sur le solde.
-
----
-
-## Tests
-
-```bash
-# Tous les tests
-mvn test
-
-# Tests unitaires uniquement
-mvn test -Dgroups="unit"
-
-# Tests d'intégration (nécessite Docker pour Testcontainers)
-mvn test -Dgroups="integration"
-
-# Rapport de couverture JaCoCo
-mvn verify
-open target/site/jacoco/index.html
-```
 
 **Stratégie de tests :**
 
 | Type | Outil | Cible |
 |------|-------|-------|
-| Unitaires | JUnit 5 + Mockito | Couche Service — logique métier isolée |
-| Intégration | @SpringBootTest + Testcontainers | Couche Repository — vraie BDD PostgreSQL |
-| Slice Controller | @WebMvcTest + MockMvc | Endpoints, sérialisation, sécurité |
-| Couverture | JaCoCo | Objectif ≥ 80% sur Service + Repository |
-
----
-
-## Documentation API
-
-Swagger UI disponible en mode `dev` :
-
-```
-http://localhost:8080/swagger-ui.html
-http://localhost:8080/v3/api-docs       ← JSON OpenAPI 3
-```
-
----
-
-## Contribuer
-
-```bash
-# Créer une branche feature
-git checkout -b feature/nom-de-la-feature
-
-# Commits conventionnels
-git commit -m "feat(transactions): add reversal endpoint"
-git commit -m "fix(auth): handle expired refresh token"
-git commit -m "test(loans): add amortization schedule unit tests"
-
-# Push et Pull Request
-git push origin feature/nom-de-la-feature
-```
-
-**Conventions de commits :** `feat`, `fix`, `test`, `refactor`, `docs`, `chore`
+| Unitaires | JUnit 5 + Mockito | Couche Service — logique métier
 
 ---
 
