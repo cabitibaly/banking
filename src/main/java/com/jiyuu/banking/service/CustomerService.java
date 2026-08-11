@@ -1,17 +1,15 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.Customer;
-import com.jiyuu.banking.entity.KycDocument;
 import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.enums.KycStatus;
-import com.jiyuu.banking.enums.KycType;
 import com.jiyuu.banking.enums.StatusCustomer;
 import com.jiyuu.banking.exception.ResourceNotFoundException;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.repository.CustomerRepository;
-import com.jiyuu.banking.repository.KycDocumentRepository;
 import com.jiyuu.banking.repository.specification.CustomerSpecification;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,13 +21,13 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
 @AllArgsConstructor
 public class CustomerService {
     private final CustomerRepository customerRepository;
-    private final KycDocumentRepository kycDocumentRepository;
 
     @Auditable(action = "CREATE", entity = "CUSTOMER")
     public CustomerResponse createCustomer(User user, CustomerRequest customerRequest) {
@@ -39,24 +37,28 @@ public class CustomerService {
             throw new ValidationException("Vous devez avoir au moins 18 ans pour créer un compte");
         }
 
-        Optional<Customer> customerOptional = this.customerRepository.findBytelephoneCustomer(customerRequest.telephone());
+        Optional<Customer> customerOptional = this.customerRepository.
+                findBytelephoneCustomer(customerRequest.telephone());
 
         if (customerOptional.isPresent()) {
             throw new ValidationException("Ce numéro de téléphone est déjà utilisé");
         }
 
-        Customer customer = new Customer();
+        Customer customer = Customer.builder()
+                .user(user)
+                .statusCustomer(StatusCustomer.PENDING)
+                .nomCustomer(customerRequest.nom())
+                .telephoneCustomer(customerRequest.telephone())
+                .dateNaissance(customerRequest.dateNaissance())
+                .numeroCustomer(this.generateNumeroCustomer(user.getIdUser()))
+                .build();
 
-        customer.setUser(user);
-        customer.setStatusCustomer(StatusCustomer.PENDING);
-        customer.setNomCustomer(customerRequest.nom());
-        customer.setTelephoneCustomer(customerRequest.telephone());
-        customer.setDateNaissance(customerRequest.dateNaissance());
-        customer.setNumeroCustomer(this.generateNumeroCustomer(user.getIdUser()));
+        customer = this.customerRepository.save(customer);
 
-        this.customerRepository.save(customer);
+        CustomerResponse customerResponse = CustomerResponse.of(customer);
 
-        return CustomerResponse.of(customer);
+        AuditContext.setNewValue(customerResponse);
+        return customerResponse;
     }
 
     private String generateNumeroCustomer(long id) {
@@ -93,6 +95,11 @@ public class CustomerService {
         return CustomerWithKycDocumentResponse.of(customer);
     }
 
+    public Customer getCustomerEntity(long id) {
+        return this.customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce clientn'existe pas"));
+    }
+
     @Auditable(action = "UPDATE", entity = "CUSTOMER")
     public void changeCustomerStatus(long idCustomer, String status) {
         Customer customer = this.customerRepository.findById(idCustomer)
@@ -110,8 +117,14 @@ public class CustomerService {
             });
         }
 
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(oldValue);
+
         customer.setStatusCustomer(StatusCustomer.valueOf(status));
-        this.customerRepository.save(customer);
+        customer = this.customerRepository.save(customer);
+
+        CustomerResponse newValue = CustomerResponse.of(customer);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "CUSTOMER")
@@ -119,11 +132,26 @@ public class CustomerService {
         Customer customer = this.customerRepository.findById(idCustomer)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
 
+        if(!Objects.equals(customer.getTelephoneCustomer(), customerRequest.telephone())) {
+            Optional<Customer> customerOptional = this.customerRepository
+                    .findBytelephoneCustomer(customerRequest.telephone());
+
+            if (customerOptional.isPresent()) {
+                throw new ValidationException("Ce numéro de téléphone est déjà utilisé");
+            }
+        }
+
+        CustomerResponse oldValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(oldValue);
+
         customer.setNomCustomer(customerRequest.nom());
         customer.setTelephoneCustomer(customerRequest.telephone());
         customer.setDateNaissance(customerRequest.dateNaissance());
 
-        this.customerRepository.save(customer);
+        customer = this.customerRepository.save(customer);
+
+        CustomerResponse newValue = CustomerResponse.of(customer);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "DELETE", entity = "CUSTOMER")
@@ -132,53 +160,9 @@ public class CustomerService {
                 () -> new ResourceNotFoundException("Ce client n'existe pas")
         );
 
+        CustomerResponse newValue = CustomerResponse.of(customer);
+        AuditContext.setOldValue(newValue);
+
         this.customerRepository.delete(customer);
-    }
-
-    @Auditable(action = "CREATE", entity = "KycDocument")
-    public void addKycDocument(long idCustomer, DocumentRequest documentRequest) {
-        Customer customer = this.customerRepository.findById(idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'existe pas"));
-
-        customer.getKycDocuments().forEach(kycDocument -> {
-            if (kycDocument.getKycType().toString().equals(documentRequest.kycType())) {
-                throw new ValidationException(
-                        String.format("Le document KYC de type %s a déjà été ajouté", documentRequest.kycType())
-                );
-            }
-        });
-
-        KycDocument kycDocument = new KycDocument();
-        kycDocument.setCustomer(customer);
-        kycDocument.setFileUrl(documentRequest.fileUrl());
-        kycDocument.setKycStatus(KycStatus.PENDING);
-        kycDocument.setKycType(KycType.valueOf(documentRequest.kycType()));
-
-        this.kycDocumentRepository.save(kycDocument);
-    }
-
-    @Auditable(action = "UPDATE", entity = "KycDocument")
-    public void updateKycDocument(long idKycDocument, long idCustomer, String status) {
-        KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
-
-        if (kycDocument.getKycStatus() != KycStatus.PENDING && kycDocument.getKycStatus() != KycStatus.IN_REVIEW) {
-            throw new ValidationException("Le document KYC a déjà été traité");
-        }
-
-        kycDocument.setKycStatus(KycStatus.valueOf(status));
-        this.kycDocumentRepository.save(kycDocument);
-    }
-
-    @Auditable(action = "DELETE", entity = "KycDocument")
-    public void deleteKycDocument(long idKycDocument, long idCustomer) {
-        KycDocument kycDocument = this.kycDocumentRepository.findByIdKycDocumentAndCustomer_IdCustomer(idKycDocument, idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Ce client n'a pas de KYC document"));
-
-        if (kycDocument.getKycStatus() == KycStatus.IN_REVIEW) {
-            throw new ValidationException("Le document KYC est en cours de traitement");
-        }
-
-        this.kycDocumentRepository.delete(kycDocument);
     }
 }

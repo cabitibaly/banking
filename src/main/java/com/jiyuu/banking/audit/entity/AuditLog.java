@@ -21,7 +21,6 @@ public class AuditLog extends BaseEntity {
     @Column(nullable = false)
     private String Entity;
 
-    @Column(nullable = false)
     private String idEntity;
 
     @Column(nullable = false)

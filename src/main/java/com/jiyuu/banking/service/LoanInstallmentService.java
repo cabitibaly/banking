@@ -1,5 +1,6 @@
 package com.jiyuu.banking.service;
 
+import com.jiyuu.banking.audit.annotation.Auditable;
 import com.jiyuu.banking.dto.InstallmentResponse;
 import com.jiyuu.banking.dto.PagedResponse;
 import com.jiyuu.banking.entity.Loan;
@@ -84,6 +85,7 @@ public class LoanInstallmentService {
                 .findByDueDateAndInstallmentStatus(LocalDate.now(), InstallmentStatus.PENDING);
     }
 
+    @Auditable(action = "READ", entity = "LoanInstallment")
     public PagedResponse<InstallmentResponse> scheduleInstallment(long idLoan, int page, int size, String sort, String direction) {
         Sort sortBy = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sort).descending()
@@ -110,8 +112,8 @@ public class LoanInstallmentService {
         installment.setInstallmentStatus(InstallmentStatus.OVERDUE);
     }
 
+    @Auditable(action = "UPDATE", entity = "LoanInstallment")
     public void repayment(Loan loan, Transactions transactions) {
-
         List<LoanInstallment> installments = this.installmentRepository
                 .findByLoanOverdueOrPaid(loan);
 

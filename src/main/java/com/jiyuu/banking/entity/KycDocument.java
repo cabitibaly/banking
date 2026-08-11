@@ -3,12 +3,10 @@ package com.jiyuu.banking.entity;
 import com.jiyuu.banking.enums.KycStatus;
 import com.jiyuu.banking.enums.KycType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
+@Builder
 @Getter
 @Setter
 @NoArgsConstructor

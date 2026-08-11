@@ -2,6 +2,7 @@ package com.jiyuu.banking.controller;
 
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.service.AccountService;
+import com.jiyuu.banking.service.MembershipService;
 import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.Map;
 @RequestMapping("/accounts")
 public class AccountController {
     private final AccountService accountService;
+    private final MembershipService membershipService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createAccount(@Valid @RequestBody AccountRequest accountRequest) {
@@ -61,9 +63,23 @@ public class AccountController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PatchMapping("/membership/{idAccount}/{idCustomer}")
+    public ResponseEntity<ApiResponse<?>> addMember(@PathVariable long idAccount, @PathVariable long idCustomer) {
+        this.membershipService.addNewMember(idAccount, idCustomer);
+
+        ApiResponse<?> response = new ApiResponse<>(
+                null,
+                "L'ajout a été effectué avec succès",
+                HttpStatus.OK.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @DeleteMapping("/membership/{idAccount}/{idCustomer}")
     public ResponseEntity<ApiResponse<?>> deleteMember(@PathVariable long idAccount, @PathVariable long idCustomer) {
-        this.accountService.deleteMember(idAccount, idCustomer);
+        this.membershipService.deleteMember(idAccount, idCustomer);
 
         ApiResponse<?> response = new ApiResponse<>(
                 null,

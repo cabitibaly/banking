@@ -63,6 +63,7 @@ public class ConfigurationSecurityApplication {
                                         .requestMatchers(HttpMethod.POST, "/accounts").hasAnyAuthority("ADMINISTRATOR_CREATE", "AGENT_CREATE")
                                         .requestMatchers(HttpMethod.PATCH, "/accounts/{idAccount}/decouvert").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .requestMatchers(HttpMethod.PATCH, "/accounts/{idAccount}/status").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
+                                        .requestMatchers(HttpMethod.PATCH, "/accounts/membership/{idAccount}/{idCustomer}").hasAnyAuthority("ADMINISTRATOR_UPDATE", "AGENT_UPDATE")
                                         .requestMatchers(HttpMethod.DELETE, "/accounts/membership/{idAccount}/{idCustomer}").hasAnyAuthority("ADMINISTRATOR_DELETE", "AGENT_DELETE")
                                         .requestMatchers(HttpMethod.GET, "/accounts").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ")
                                         .requestMatchers(HttpMethod.GET, "/accounts/{idAccount}").hasAnyAuthority("ADMINISTRATOR_READ", "AGENT_READ", "CUSTOMER_READ")

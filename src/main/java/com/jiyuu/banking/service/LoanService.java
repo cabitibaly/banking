@@ -1,5 +1,7 @@
 package com.jiyuu.banking.service;
 
+import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.DocumentType;
@@ -37,6 +39,7 @@ public class LoanService {
     private final LoanInstallmentService installmentService;
     private final TransactionsService transactionsService;
 
+    @Auditable(action = "CREATE", entity = "Loan")
     public LoanBaseResponse createLoan(LoanRequest request) {
         if (request.duration() == 0) {
             throw new ValidationException("La durée doit être supérieure à 1");
@@ -63,9 +66,13 @@ public class LoanService {
                 .build();
 
         loan = this.loanRepository.save(loan);
-        return LoanBaseResponse.of(loan);
+
+        LoanBaseResponse response = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(response);
+        return response;
     }
 
+    @Auditable(action = "CREATE", entity = "LoanDocument")
     public void addDocument(long idLoan, DocumentRequest request) {
         Loan loan = this.loanRepository.findById(idLoan)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce crédit n'existe pas"));
@@ -104,6 +111,7 @@ public class LoanService {
         this.loanDocumentRepository.save(loanDocument);
     }
 
+    @Auditable(action = "READ", entity = "Loan")
     public PagedResponse<LoanBaseResponse> AllLoans(int page, int size, String soortBy, String direction) {
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(soortBy).descending()
@@ -117,6 +125,7 @@ public class LoanService {
         return PagedResponse.of(loans);
     }
 
+    @Auditable(action = "READ", entity = "Loan")
     public LoanWithDocumentResponse getLoan(long id) {
         Loan loan = this.loanRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce crédit n'existe pas")
@@ -125,6 +134,7 @@ public class LoanService {
         return LoanWithDocumentResponse.of(loan);
     }
 
+    @Auditable(action = "UPDATE", entity = "Loan")
     public void approveLoan(long id, ApproveLoanRequest request) {
 
         if(request.interest().compareTo(BigDecimal.ZERO) == 0) {
@@ -160,15 +170,22 @@ public class LoanService {
 
         this.transactionsService.createTransaction(transactionRequest, null);
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setLoanStatus(LoanStatus.APPROVED);
         loan.setRemainingAmount(loan.getAmount());
         loan.setDisbursementDate(LocalDate.now());
         loan.setInterestRate(request.interest());
         loan.setComments(request.comments());
 
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
+
         this.installmentService.generateInstallment(loan);
     }
 
+    @Auditable(action = "UPDATE", entity = "Loan")
     public void rejectLoan(long id) {
         Loan loan = this.loanRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Ce crédit n'existe pas")
@@ -190,10 +207,17 @@ public class LoanService {
             throw new ValidationException("Ce crédit a dejà été traité.");
         }
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setLoanStatus(LoanStatus.REJECTED);
-        this.loanRepository.save(loan);
+        loan = this.loanRepository.save(loan);
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
     }
 
+    @Auditable(action = "UPDATE", entity = "Loan")
     public void earlyRepayment(long id) {
         Loan loan = this.loanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce crédit n'existe pas"));
@@ -213,10 +237,6 @@ public class LoanService {
         }
 
         BigDecimal remainingAmount = loan.getRemainingAmount();
-        if (remainingAmount.compareTo(BigDecimal.ZERO) == 0 && loan.getLoanStatus() == LoanStatus.CLOSED) {
-            throw new ValidationException("Ce crédit a déjà été payé");
-        }
-
         TransactionRequest request = TransactionRequest.builder()
                 .amount(remainingAmount)
                 .currency("XOF")
@@ -227,9 +247,15 @@ public class LoanService {
         Transactions transactions = this.transactionsService.createTransactionEntity(request, null);
         this.installmentService.repayment(loan, transactions);
 
+        LoanBaseResponse oldValue = LoanBaseResponse.of(loan);
+        AuditContext.setOldValue(oldValue);
+
         loan.setRemainingAmount(BigDecimal.ZERO);
         loan.setLoanStatus(LoanStatus.CLOSED);
-        this.loanRepository.save(loan);
+        loan = this.loanRepository.save(loan);
+
+        LoanBaseResponse newValue = LoanBaseResponse.of(loan);
+        AuditContext.setNewValue(newValue);
     }
 
     public void processMonthlyInstallment() {

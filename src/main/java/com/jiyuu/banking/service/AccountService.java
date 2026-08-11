@@ -1,6 +1,7 @@
 package com.jiyuu.banking.service;
 
 import com.jiyuu.banking.audit.annotation.Auditable;
+import com.jiyuu.banking.audit.context.AuditContext;
 import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.*;
 import com.jiyuu.banking.enums.AccountStatus;
@@ -46,6 +47,7 @@ public class AccountService {
     private final SpringTemplateEngine springTemplateEngine;
     private final NotificationSender notificationSender;
     private final TransactionsService transactionsService;
+    private final AccountNumberGenerator accountNumberGenerator;
     private final CardService cardService;
 
     @Value("${max-decouvert}")
@@ -59,6 +61,7 @@ public class AccountService {
             TransactionsService transactionsService,
             SpringTemplateEngine springTemplateEngine,
             NotificationSender notificationSender,
+            AccountNumberGenerator accountNumberGenerator,
             CardService cardService
     ) {
         this.accountRepository = accountRepository;
@@ -68,15 +71,16 @@ public class AccountService {
         this.transactionsService = transactionsService;
         this.springTemplateEngine = springTemplateEngine;
         this.notificationSender = notificationSender;
+        this.accountNumberGenerator = accountNumberGenerator;
         this.cardService = cardService;
     }
 
-//    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
+    @Auditable(action = "CREATE", entity = "ACCOUNT, ACCOUNTMEMBERSHIP")
     public void createAccount(AccountRequest accountRequest) {
         Customer customer = this.customerRepository.findById(accountRequest.idCustomer())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-        String accountNumber = AccountNumberGenerator.generate();
+        String accountNumber = accountNumberGenerator.generate();
         Account account = Account.builder()
                 .accountType(AccountType.valueOf(accountRequest.type()))
                 .accountStatus(AccountStatus.PENDING)
@@ -95,6 +99,10 @@ public class AccountService {
                 .build();
 
         this.accountMembershipRepository.save(accountMembership);
+
+        AccountResponse response = AccountResponse.of(account);
+
+        AuditContext.setNewValue(response);
     }
 
     @Auditable(action = "UPDATE", entity = "ACCOUNT")
@@ -102,8 +110,14 @@ public class AccountService {
         Account account = this.accountRepository.findById(idAccount)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
+        AccountResponse oldValue = AccountResponse.of(account);
+        AuditContext.setOldValue(oldValue);
+
         account.setAccountStatus(AccountStatus.valueOf(status));
-        this.accountRepository.save(account);
+        account = this.accountRepository.save(account);
+
+        AccountResponse newValue = AccountResponse.of(account);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "UPDATE", entity = "ACCOUNT")
@@ -115,37 +129,14 @@ public class AccountService {
             throw new ValidationException("Le montant de découverte ne peut pas dépasser le maximum de " + MAX_DECOUVERT);
         }
 
+        AccountResponse oldValue = AccountResponse.of(account);
+        AuditContext.setOldValue(oldValue);
+
         account.setDecouvert(decouvert);
-        this.accountRepository.save(account);
-    }
+        account = this.accountRepository.save(account);
 
-    @Auditable(action = "CREATE", entity = "ACCOUNTMEMBERSHIP")
-    public void addNewMember(long idAccount, long idCustomer) {
-        Account account = this.accountRepository.findById(idAccount)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-
-        Customer customer = this.customerRepository.findById(idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-
-        AccountMembership accountMembership = AccountMembership.builder()
-                .isPrimary(false)
-                .account(account)
-                .customer(customer)
-                .build();
-
-        this.accountMembershipRepository.save(accountMembership);
-    }
-
-    @Auditable(action = "DELETE", entity = "ACCOUNTMEMBERSHIP")
-    public void deleteMember(long idAccount, long idCustomer) {
-        AccountMembership accountMembership = this.accountMembershipRepository.findByAccount_idAccountAndCustomer_IdCustomer(idAccount, idCustomer)
-                .orElseThrow(() -> new ResourceNotFoundException("AccountMembership not found"));
-
-        if (accountMembership.isPrimary()) {
-            throw new AccessDeniedException("Impossible de supprimer le membre principal");
-        }
-
-        this.accountMembershipRepository.delete(accountMembership);
+        AccountResponse newValue = AccountResponse.of(account);
+        AuditContext.setNewValue(newValue);
     }
 
     @Auditable(action = "READ", entity = "ACCOUNT")
@@ -170,6 +161,11 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         return AccountResponse.of(account);
+    }
+
+    public Account getAccountEntity(long id) {
+        return this.accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
     }
 
     @Auditable(action = "READ", entity = "TRANSACTION")

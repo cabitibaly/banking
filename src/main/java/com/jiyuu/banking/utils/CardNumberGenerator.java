@@ -1,20 +1,21 @@
 package com.jiyuu.banking.utils;
 
+import org.springframework.stereotype.Component;
+
 import java.security.SecureRandom;
 
+@Component
 public class CardNumberGenerator {
     private static final int TOTAL_LENGTH = 16;
     private static final int BASE_LENGTH  = 15; // 15 chiffres + 1 checkdigit Luhn
 
     private static final SecureRandom random = new SecureRandom();
 
-    private CardNumberGenerator() {}
-
-    public static String generate() {
+    public String generate() {
         return buildLuhnNumber();
     }
 
-    private static String buildLuhnNumber() {
+    private String buildLuhnNumber() {
         StringBuilder sb = new StringBuilder(TOTAL_LENGTH);
         sb.append(1 + random.nextInt(9));
         for (int i = 1; i < BASE_LENGTH; i++) {
@@ -25,7 +26,7 @@ public class CardNumberGenerator {
         return sb.toString();
     }
 
-    private static int computeLuhnCheckDigit(String base) {
+    private int computeLuhnCheckDigit(String base) {
         int sum = 0;
         boolean doubleIt = true;
 
@@ -41,7 +42,7 @@ public class CardNumberGenerator {
         return (10 - (sum % 10)) % 10;
     }
 
-    public static boolean isValidLuhn(String number) {
+    public boolean isValidLuhn(String number) {
         if (number == null || number.length() != TOTAL_LENGTH) return false;
         int sum = 0;
         boolean doubleIt = false;

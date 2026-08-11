@@ -5,6 +5,7 @@ import com.jiyuu.banking.dto.*;
 import com.jiyuu.banking.entity.User;
 import com.jiyuu.banking.exception.ValidationException;
 import com.jiyuu.banking.service.CustomerService;
+import com.jiyuu.banking.service.KycDocumentService;
 import com.jiyuu.banking.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,7 @@ import java.time.Instant;
 public class CustomerController {
     private final CustomerService customerService;
     private final UserService userService;
+    private final KycDocumentService kycDocumentService;
     private final JwtUtils jwtUtils;
 
     @PostMapping
@@ -89,7 +91,7 @@ public class CustomerController {
 
     @PostMapping("/{idCustomer}/kyc")
     public ResponseEntity<ApiResponse<?>> addKycDocument(@PathVariable("idCustomer") long id, @Valid @RequestBody DocumentRequest documentRequest) {
-        this.customerService.addKycDocument(id, documentRequest);
+        this.kycDocumentService.addKycDocument(id, documentRequest);
         ApiResponse<?> response = new ApiResponse<>(
                 null,
                 "Ajout du document réussi",
@@ -147,7 +149,7 @@ public class CustomerController {
             @PathVariable("idKycDocument") long idKycDocument,
             @RequestParam(name = "status", required = true) String status
     ) {
-        this.customerService.updateKycDocument(idKycDocument, idCustomer, status);
+        this.kycDocumentService.updateKycDocument(idKycDocument, idCustomer, status);
         ApiResponse<?> response = new ApiResponse<>(
                 null,
                 "Mise à jour du document réussi",
@@ -163,7 +165,7 @@ public class CustomerController {
             @PathVariable("idCustomer") long idCustomer,
             @PathVariable("idKycDocument") long idKycDocument
     ) {
-        this.customerService.deleteKycDocument(idKycDocument, idCustomer);
+        this.kycDocumentService.deleteKycDocument(idKycDocument, idCustomer);
         ApiResponse<?> response = new ApiResponse<>(
                 null,
                 "Suppression du document réussi",
